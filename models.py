@@ -11,7 +11,7 @@ class NaiveRNN(nn.Module):
         self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        h0 = torch.zeros(1, x.size(0), hidden_size).to(x.device)
+        h0 = torch.zeros(1, x.size(0), self.hidden_size).to(x.device)
         out, _ = self.rnn(x, h0)
         out = self.fc(out[:, -1, :])
         return out

@@ -12,7 +12,7 @@ def load_data():
 
     return dfs
 
-def tensorize_data(df, col_split):
+def tensorize_data(df, labels_num):
     # Assumes df is read directly from Neuron Data CSV
 
     # Drop rat number, cell number, trial number. Reindex
@@ -20,12 +20,12 @@ def tensorize_data(df, col_split):
     df.columns = range(len(df.columns))
 
     # 1 = Press, 0 = DS+/DS-
-    if col_split != 1 and col_split != 0:
-        raise ValueError("col_split must be either 0 or 1")
+    if labels_num != 1 and labels_num != 0:
+        raise ValueError("labels must be either 0 or 1")
 
     # Extract labels
-    labels = df[col_split]
-    labels = torch.tensor(labels, dtype=torch.float32)
+    labels = df[labels_num]
+    labels = torch.tensor(labels, dtype=torch.long)
 
     # Drop both Press and DS+/DS- columns
     df = df.drop(columns=df.columns[:2])
