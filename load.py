@@ -33,11 +33,25 @@ def tensorize_data(df, labels_num):
 
     return (df, labels)
 
+def clean_data(df):
+    # There shouldn't be any NA rows, but in case
+    df = df.dropna()
+
+    # Convert all to numbers
+    df = df.apply(pd.to_numeric, errors='coerce')
+
+    # Filter rows of only 0s
+    data_cols = df.columns[5:]
+    df = df[(df[data_cols] != 0).any(axis=1)]
+    
+    return df
+
 # Entry point for testing
 if __name__ == "__main__":
     dfs = load_data()
     print(type(dfs[0][0]))
 
-    # Test tensorize_data
     df = dfs[0][0]
+    clean_data(df)
+    # Test tensorize_data
     print(tensorize_data(df, 1)[0])
