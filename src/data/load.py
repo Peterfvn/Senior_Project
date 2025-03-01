@@ -73,6 +73,12 @@ def clean_data(df):
     
     return df
 
+def population_avg(df):
+    # Averages rats with same number and trial type. Possibly same outcome?
+    population_df = df.groupby([df.columns[0], df.columns[3]]).mean().reset_index()
+    return population_df
+    
+
 # Entry point for testing
 if __name__ == "__main__":
     dfs = load_data()
