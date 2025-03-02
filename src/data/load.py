@@ -77,7 +77,28 @@ def population_avg(df):
     # Averages rats with same number and trial type. Possibly same outcome?
     population_df = df.groupby([df.columns[0], df.columns[3]]).mean().reset_index()
     return population_df
+
+# Not sure this is necessary considering my data is already in Z-Scores
+def normalize_by_rat(df):
+    rats = df[df.columns[0]].unique()
+    normalized_df = pd.DataFrame()
+
+    for rat in rats:
+        rat_data = df[df[df.columns[0]] == rat]
+        rat_data[:, 5:] = (rat_data[:, 5:] - rat_data[:, 5:].min()) / (rat_data.iloc[:, 5:].std())
+        normalized_df = pd.concat([normalized_df, rat_data], ignore_index=True)
+
+        return normalized_df
     
+def cluster_rats(df, n_clusters=2):
+    from sklearn.cluster import KMeans
+
+    rat_features = df.groupby(df.columns[0]).agg({col: ['mean', 'max', 'std'] for col in df.columns[5:]}).mean(axis=1)
+
+    kmeans = KMeans(n_clusters=n_clusters)
+    clusters = kmeans.fit_predict(rat_features.values.reshape(-1, 1))
+
+    return dict(zip(rat_features.index, clusters))
 
 # Entry point for testing
 if __name__ == "__main__":

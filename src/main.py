@@ -1,4 +1,5 @@
 from data.load import *
+from data.visualize import *
 from models.lstm import NaiveLSTM
 from training.trainer import *
 import torch
@@ -24,7 +25,10 @@ def main():
     df = clean_data(df)
 
     population_df = population_avg(df)
-    print(population_df)
+
+    # plot_population_avg(population_df, "population_avg.png")
+    clusters = cluster_rats(population_df)
+    plot_rat_clusters(population_df, clusters, "rat_clusters.png")
     return
 
     dataset, labels = tensorize_data(df, args.labels)
