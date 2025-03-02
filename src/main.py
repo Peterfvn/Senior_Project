@@ -26,9 +26,13 @@ def main():
 
     population_df = population_avg(df)
 
-    # plot_population_avg(population_df, "population_avg.png")
-    clusters = cluster_rats(population_df)
-    plot_rat_clusters(population_df, clusters, "rat_clusters.png")
+    # plot_population_avg(population_df, "population_avg.png")``
+    pop_minus = population_df[population_df[population_df.columns[1]] == 0]
+    pop_plus = population_df[population_df[population_df.columns[1]] == 1]
+    clusters_minus = cluster_rats(pop_minus)
+    clusters_plus = cluster_rats(pop_plus)
+    plot_rat_clusters(pop_minus, clusters_minus, "rat_clusters_minus.png")
+    plot_rat_clusters(pop_plus, clusters_plus, "rat_clusters_plus.png")
     return
 
     dataset, labels = tensorize_data(df, args.labels)
