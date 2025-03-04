@@ -6,6 +6,11 @@ from dotenv import load_dotenv
 import os
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
+from tslearn.metrics import dtw
+from tslearn.clustering import TimeSeriesKMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import AgglomerativeClustering
+
 
 def load_data():
     # All filespaths
@@ -99,6 +104,94 @@ def cluster_rats(df, n_clusters=2):
     clusters = kmeans.fit_predict(rat_features.values.reshape(-1, 1))
 
     return dict(zip(rat_features.index, clusters))
+
+def extract_regional_features(df, id):
+    # Extract features on a by rat basis
+    rat_data = df[df[df.columns[0]] == id][df.columns[5:]]
+    rat_data = rat_data.values.flatten()
+    
+    # Assuming first 20/80/100 bins are divisors
+    pre_tone = rat_data[:20]
+    during_tone = rat_data[20:80] 
+    lever_intro = rat_data[80:]
+    
+    features = {
+        # Pre-tone features
+        'pre_tone_mean': np.mean(pre_tone),
+        'pre_tone_std': np.std(pre_tone),
+        
+        # During-tone features
+        'tone_mean': np.mean(during_tone),
+        'tone_std': np.std(during_tone),
+        'tone_max': np.max(during_tone),
+        'tone_min': np.min(during_tone),
+        'tone_range': np.max(during_tone) - np.min(during_tone),
+        
+        # Response timing features
+        'time_to_max': np.argmax(during_tone),
+        'time_to_min': np.argmin(during_tone),
+        
+        # Lever introduction features
+        'lever_mean': np.mean(lever_intro),
+        'lever_response': np.mean(lever_intro) - np.mean(pre_tone)
+    }
+    
+    return features, {'pre_tone': pre_tone, 'during_tone': during_tone, 'lever_intro': lever_intro}
+
+def dtw_calculate_metrics(df):
+    time_data = df.iloc[:, 5:].values
+    n = len(time_data)
+    dist_matrix = np.zeros((n, n))
+
+    for i in range(n):
+        for j in range(i+1, n):
+            distance = dtw(time_data[i], time_data[j])
+            dist_matrix[i, j] = distance
+            dist_matrix[j, i] = distance
+
+    return dist_matrix
+
+def cluster_with_regional_dtw(df, n_clusters=2, region='during_tone'):
+    """Cluster rats based on DTW distances for a specific temporal region."""
+    rat_ids = df[df.columns[0]].unique()
+    all_features = []
+    time_series_by_region = {region: [] for region in ['pre_tone', 'during_tone', 'lever_intro']}
+    rat_id_to_index = {}
+    
+    # Extract features and time series for each rat
+    for i, rat_id in enumerate(rat_ids):
+        features, regions = extract_regional_features(df, rat_id)
+        all_features.append(features)
+        
+        for region_name, region_data in regions.items():
+            time_series_by_region[region_name].append(region_data)
+        
+        rat_id_to_index[rat_id] = i
+    
+    # Calculate DTW distance matrix for the specified region
+    region_time_series = time_series_by_region[region]
+    print(region_time_series)
+    exit()
+    dtw_matrix = dtw_distance_matrix(region_time_series)
+    
+    # Apply hierarchical clustering using the DTW distance matrix
+    clustering = AgglomerativeClustering(
+        n_clusters=n_clusters, 
+        affinity='precomputed', 
+        linkage='average'
+    )
+    
+    cluster_labels = clustering.fit_predict(dtw_matrix)
+    
+    # Create a dictionary mapping rat IDs to cluster labels
+    clusters = {rat_id: cluster_labels[rat_id_to_index[rat_id]] for rat_id in rat_ids}
+    
+    # Create a feature DataFrame for further analysis
+    feature_df = pd.DataFrame(all_features)
+    feature_df['rat_id'] = rat_ids
+    feature_df['cluster'] = cluster_labels
+    
+    return clusters, feature_df, dtw_matrix
 
 # Entry point for testing
 if __name__ == "__main__":
