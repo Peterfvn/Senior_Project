@@ -26,6 +26,9 @@ def main():
 
     population_df = population_avg(df)
 
+    print(population_df)
+    exit()
+
     time_cols = df.columns[5:]
 
 

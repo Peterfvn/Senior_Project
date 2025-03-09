@@ -66,3 +66,18 @@ Principal Component Analysis (PCA) Before Clustering
     PCA can help determine the most important response characteristics and reduce noise.
     Running K-Means on PCA-reduced features may yield better clusters."
 
+
+
+Timings:
+
+-1 - 4s
+0-3 is tone
+
+
+-1 is first 20, before onset (20)
+
+400ms of 3 is initial onset
+100ms gap (arbitrary)
+25000ms is hearing, nothing happens
+81-88 lever presentation
+afterwards lever visible for 1000ms
