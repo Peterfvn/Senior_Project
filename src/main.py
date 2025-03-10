@@ -19,15 +19,12 @@ def parse_args():
     return parser.parse_args()
 
 def main():
+    """Focus on feature extraction from clustering"""
     args = parse_args()
-    # Load data
     df = load_file('PFC_con_4.csv')
     df = clean_data(df)
 
     population_df = population_avg(df)
-
-    print(population_df)
-    exit()
 
     time_cols = df.columns[5:]
 
