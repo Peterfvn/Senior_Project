@@ -1,10 +1,14 @@
 from data.load import *
 from data.visualize import *
 from models.lstm import NaiveLSTM
+
+from models.ContrastiveLearning import *
+
 from training.trainer import *
 import torch
 from torch import nn
 import argparse
+import numpy as np
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Neural Network Training Parameters')
@@ -23,38 +27,30 @@ def main():
     args = parse_args()
     df = load_file('PFC_con_4.csv')
     df = clean_data(df)
+    df = trial_avg(df)
 
-    population_df = population_avg(df)
+    np.random.seed(42)
+    indices = np.random.permutation(len(df))
+    split_idx =  int(0.8 * len(df))
 
-    time_cols = df.columns[5:]
+    train_indices, test_indices = indices[:split_idx], indices[split_idx:]
 
+    train_dataset = ContrastiveDataset(df, train_indices, train=True, augment=True)
+    test_dataset = ContrastiveDataset(df, test_indices, train=False, augment=False)
 
-    # plot_population_avg(population_df, "population_avg_con_5.png")
-    pop_minus = population_df[population_df[population_df.columns[1]] == 0]
-    pop_plus = population_df[population_df[population_df.columns[1]] == 1]
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
-    clusters, feature_df, dtw_matrix = cluster_with_regional_dtw(pop_minus, n_clusters=3, region='during_tone')
-    visualize_clusters(pop_minus, clusters, time_cols, region_start_idx=20, region_end_idx=80, name="DTW Clustering Minus-Population")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    clusters, feature_df, dtw_matrix = cluster_with_regional_dtw(pop_plus, n_clusters=3, region='during_tone')
-    visualize_clusters(pop_plus, clusters, time_cols, region_start_idx=20, region_end_idx=80, name="DTW Clustering Plus-Population")
-    return
+    encoder = ContrastiveModel(input_size=100, hidden_size=128, output_size=64, projection_dim=128)
+    optimizer = torch.optim.Adam(encoder.parameters(), lr=args.lr)
 
-    """I'm focusing on feature extraction for now. I'll come back to ML later"""
-    # dataset, labels = tensorize_data(df, args.labels)
-
-    # dataset = dataset.unsqueeze(-1)
-    # train, test = prepareDataLoader(dataset, labels, args.batch_size)
-
-    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # model = NaiveLSTM(1, 32, 2).to(device)
-    # criterion = nn.CrossEntropyLoss()
-    # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    # epochs = args.epochs
-
-    # train_model(model, train, criterion, optimizer, epochs, device)
-    # evaluate(model, test, device)
-
+    print(f"DataFrame length: {len(df)}")
+    print(f"Generated indices length: {len(indices)}")
+    print(f"Train indices length: {len(train_indices)}")
+    # train_encoder(encoder, train_dataloader, optimizer, device, num_epochs=args.epochs)
+    # model = TestClassifier()
 
 
 if __name__ == "__main__":

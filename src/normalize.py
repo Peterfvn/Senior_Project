@@ -67,4 +67,5 @@ if __name__ == '__main__':
     data_path = os.getenv("NEURON_DATA_DIR")
     df = pd.read_csv(os.path.join(data_path, "PFC_con_4.csv"))
     trial_df = trial_avg(df)
-    plot_trial_averages(trial_df, "trial_avg_con_4.png")
+
+    

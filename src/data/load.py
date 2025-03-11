@@ -193,6 +193,16 @@ def cluster_with_regional_dtw(df, n_clusters=2, region='during_tone'):
     
     return clusters, feature_df, dtw_matrix
 
+def trial_avg(df):
+    """Calculate population average by trial"""
+    # Group by rat_id and trial_id, then calculate the mean for each group
+    df_columns = df.columns.tolist()
+    df = df.groupby([df.columns[0], df.columns[2]]).mean().reset_index()
+
+    # Reset indexes
+    df = df[df_columns]
+    return df
+
 # Entry point for testing
 if __name__ == "__main__":
     dfs = load_data()
