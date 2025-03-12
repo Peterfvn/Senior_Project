@@ -29,31 +29,38 @@ def main():
     df = clean_data(df)
     df = trial_avg(df)
 
-    # Having issues with indexing, removing the randomization for now
-    # np.random.seed(42)
-    # indices = np.random.permutation(len(df))
+    np.random.seed(42)
+    indices = np.random.permutation(len(df))
+    split_idx =  int(0.8 * len(df))
 
-    indices = np.arange(len(df))
-    # split_idx =  int(0.8 * len(df))
+    train_indices, test_indices = indices[:split_idx], indices[split_idx:]
 
-    # train_indices, test_indices = indices[:split_idx], indices[split_idx:]
+    train_dataset_encoder = ContrastiveDataset(df, train_indices, train=True, augment=True)
+    train_dataset_decoder = ContrastiveDataset(df, train_indices, train=True, augment=False)
 
-    train_dataset = ContrastiveDataset(df, indices, train=True, augment=True)
-    test_dataset = ContrastiveDataset(df, indices, train=False, augment=False)
+    test_dataset = ContrastiveDataset(df, test_indices, train=False, augment=False)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    # test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
+    train_dataloader_encoder = DataLoader(train_dataset_encoder, batch_size=args.batch_size, shuffle=True)
+    train_dataloader_decoder = DataLoader(train_dataset_decoder, batch_size=args.batch_size, shuffle=True)
+
+    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     encoder = ContrastiveModel(input_size=100, hidden_size=128, output_size=64, projection_dim=128)
+    encoder = encoder.to(device)
+
     optimizer = torch.optim.Adam(encoder.parameters(), lr=args.lr)
 
-    print(f"DataFrame length: {len(df)}")
-    print(f"Generated indices length: {len(indices)}")
-    print(f"Train indices length: {len(indices)}")
-    train_encoder(encoder, train_dataloader, optimizer, device, num_epochs=args.epochs)
-    # model = TestClassifier()
+    train_encoder(encoder, train_dataloader_encoder, optimizer, device, num_epochs=args.epochs)
+
+    model = TestClassifier(encoder, 128, 1)
+    model = model.to(device)
+
+    criterion = nn.BCEWithLogitsLoss() 
+
+    train_classifier(model, train_dataloader_decoder, optimizer, criterion, device, num_epochs=args.epochs)
+    evaluate_classifier(model, test_dataloader, device)
 
 
 if __name__ == "__main__":

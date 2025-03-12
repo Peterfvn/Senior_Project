@@ -101,14 +101,14 @@ class ContrastiveDataset(Dataset):
     def __init__(self, data, indices, train=True, augment=True):
         self.data = data
         self.augment = augment
+        self.indices = indices
 
-        self.labels = torch.tensor(self.data.iloc[indices][self.data.columns[4]].values, dtype=torch.long)
+        self.labels = torch.tensor(self.data.iloc[indices][self.data.columns[4]].values, dtype=torch.float32)
 
         self.features = torch.tensor(self.data.iloc[indices, 5:].values, dtype=torch.float32)
-        print(f"Features shape: {self.features.shape}")
 
     def __len__(self):
-        return len(self.data)
+        return len(self.indices)
 
     
     def __getitem__(self, idx):
@@ -130,23 +130,27 @@ class TestClassifier(nn.Module):
 
     def forward(self, x):
         with torch.no_grad():
-            features = self.encoder(x)
+            features, _ = self.encoder(x)
         return self.classifier(features)
     
 def train_classifier(model, dataloader, optimizer, criterion, device, num_epochs=10):
     model.train()
 
     for epoch in range(num_epochs):
+        correct = 0
         total_loss = 0
         for x, y in dataloader:
             x, y = x.to(device), y.to(device)
 
             # Forward pass
             logits = model(x)
+
+            # Squeeze the logits to match the shape of y, unsure why it is [batch_size, 1]
+            logits = logits.squeeze()
             loss = criterion(logits, y)
 
             # Compute accuracy
-            preds = logits.argmax(dim=1)
+            preds = (logits > 0).float()
             correct += (preds == y).sum().item()
 
             # Backprop
