@@ -29,17 +29,20 @@ def main():
     df = clean_data(df)
     df = trial_avg(df)
 
-    np.random.seed(42)
-    indices = np.random.permutation(len(df))
-    split_idx =  int(0.8 * len(df))
+    # Having issues with indexing, removing the randomization for now
+    # np.random.seed(42)
+    # indices = np.random.permutation(len(df))
 
-    train_indices, test_indices = indices[:split_idx], indices[split_idx:]
+    indices = np.arange(len(df))
+    # split_idx =  int(0.8 * len(df))
 
-    train_dataset = ContrastiveDataset(df, train_indices, train=True, augment=True)
-    test_dataset = ContrastiveDataset(df, test_indices, train=False, augment=False)
+    # train_indices, test_indices = indices[:split_idx], indices[split_idx:]
+
+    train_dataset = ContrastiveDataset(df, indices, train=True, augment=True)
+    test_dataset = ContrastiveDataset(df, indices, train=False, augment=False)
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
+    # test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -48,8 +51,8 @@ def main():
 
     print(f"DataFrame length: {len(df)}")
     print(f"Generated indices length: {len(indices)}")
-    print(f"Train indices length: {len(train_indices)}")
-    # train_encoder(encoder, train_dataloader, optimizer, device, num_epochs=args.epochs)
+    print(f"Train indices length: {len(indices)}")
+    train_encoder(encoder, train_dataloader, optimizer, device, num_epochs=args.epochs)
     # model = TestClassifier()
 
 

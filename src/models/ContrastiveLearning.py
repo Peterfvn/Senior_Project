@@ -43,7 +43,7 @@ class ContrastiveModel(nn.Module):
         return self.projection(features), features
     
 # Contrastive loss function
-def contrastive_loss(z1, z2, temperature=0.5):
+def contrastive_loss(z1, z2, device, temperature=0.5):
     """NT-Xent loss"""
     batch_size = z1.shape[0]
     z = torch.cat([z1, z2], dim=0) # Concat positive pairs
@@ -52,7 +52,7 @@ def contrastive_loss(z1, z2, temperature=0.5):
     sim_matrix = F.cosine_similarity(z.unsqueeze(1), z.unsqueeze(0), dim=2)
 
     # Labels (Positives on diagonal)
-    labels = torch.arange(batch_size, device=z.device)
+    labels = torch.arange(batch_size).to(device)
     labels = torch.cat([labels, labels], dim=0) # Duplicate for both augmented views
 
     # Apply contrastive loss
@@ -72,7 +72,7 @@ def train_encoder(model, dataloader, optimizer, device, num_epochs=10):
             z2, _ = model(x2)
 
             # Contrastive loss
-            loss = contrastive_loss(z1, z2)
+            loss = contrastive_loss(z1, z2, device)
             
             # Backprop
             optimizer.zero_grad()
@@ -85,16 +85,17 @@ def train_encoder(model, dataloader, optimizer, device, num_epochs=10):
 
 def augment_data(x):
     """Augmentation for contrastive learning"""
+    def scaling(x, scale_factor=0.1):
+        scale = 1.0 + (torch.randn(1, device=x.device) * scale_factor)
+        return x * scale
+    def jitter(x, sigma=0.05):
+        return x + torch.randn_like(x) * sigma
+    def batch_shuffle(x):
+        return x[torch.randperm(x.shape[0])]
+    x = jitter(x, sigma=0.05)
+    x = scaling(x, scale_factor=0.1)
 
-    # Ensure 2D shape
-    if len(x.shape) == 1:
-        x = x.unsqueeze(0)
-    
-    noise = torch.randn_like(x) * 0.1 # Gaussian noise
-
-    shift = torch.roll(x, shifts=1, dims=1) # Shift along time dimension (maybe use jitter, i dont like this)
-
-    return (x + noise + shift)/2 # Average it
+    return x
 
 class ContrastiveDataset(Dataset):
     def __init__(self, data, indices, train=True, augment=True):
@@ -108,13 +109,7 @@ class ContrastiveDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
-    
-    # def augment_data(x):
-    #     # Augmentation for contrastive learning
-    #     noise = torch.randn_like(x) * 0.1 # Gaussian noise
-    #     shift = torch.roll(x, shifts=1, dims=1) # Shift along time dimension (maybe use jitter, i dont like this)
-    
-    #     return (x + noise + shift)/2 # Average it
+
     
     def __getitem__(self, idx):
         x = self.features[idx]
