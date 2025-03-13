@@ -1,73 +1,3 @@
-I'm really the only person using this repo, so this README is really just for me.
-This is listing what I'm going to look into more
-
-Possible solutions to the problem with individuality in rats shown by my population_avg data
-1. Normalization/Standardize between rats
-2. Rat-Specific Identifier as a feature
-3. Train individual models for each rat, then meta-learn
-4. Cluster Rtas Based on Response Types
-5. Feature Engineering Focusing on patterns instead of raw data
-
-I've implemented 1/4 but the others are on the table
-Possible improvements for 1/4
-
-1. Normalization of rats.
-   The rats are already normalized. Probably not super helpful but I haven't tested it
-
-2. Clustering rats based on response types
-   GPT's feedback (i'm cut for time):
-   "Explanation of Your Graphs
-
-Your clustering algorithm grouped rats based on the statistical properties (mean, max, std) of their neural responses over time. The graphs show how rats within each cluster exhibit similar response patterns.
-
-    Cluster 0 (Top Graph)
-        Rats 1, 5, and 10 belong to this cluster.
-        Their responses seem relatively low in magnitude and more centered around zero.
-        The fluctuations are somewhat constrained, meaning they might exhibit less variability compared to Cluster 1.
-
-    Cluster 1 (Bottom Graph)
-        Rats 3, 11, 15, and 16 belong to this cluster.
-        Their responses appear higher in magnitude and generally more positive.
-        The fluctuations appear more pronounced, suggesting these rats respond more strongly compared to Cluster 0.
-
-Should You Have Clustered Differently?
-
-Your current approach uses mean, max, and standard deviation as features to cluster rats, which captures overall response intensity but may not fully reflect time-dependent patterns. Here are some considerations:
-Potential Issues with Your Approach
-
-    Loss of Temporal Information
-        Since you aggregate statistics across time, the clustering does not consider specific response shapes over time (e.g., early vs. late responses).
-        Two rats with different response timing but similar mean/std values could end up in the same cluster.
-
-    1D Clustering Might Be Too Simple
-        You are clustering using only one feature (rat_features.values.reshape(-1, 1)).
-        This could oversimplify the clustering, missing more complex relationships in the data.
-
-    Cluster Boundaries Might Be Arbitrary
-        K-Means assumes clusters are spherical, which might not match the real structure of the data.
-
-Alternative Clustering Approaches
-
-    Use Multiple Features for Clustering
-        Instead of rat_features.values.reshape(-1, 1), use all three features (mean, max, std) together:
-
-    kmeans = KMeans(n_clusters=n_clusters)
-    clusters = kmeans.fit_predict(rat_features)
-
-    This way, the algorithm considers all statistical properties instead of reducing them to a single dimension.
-
-Use Dynamic Time Warping (DTW) for Clustering
-
-    DTW measures similarity based on entire response trajectories, not just summary statistics.
-    Hierarchical clustering with DTW distance might reveal natural groups in the data.
-
-Principal Component Analysis (PCA) Before Clustering
-
-    PCA can help determine the most important response characteristics and reduce noise.
-    Running K-Means on PCA-reduced features may yield better clusters."
-
-
-
 Timings:
 
 -1 - 4s
@@ -81,3 +11,61 @@ Timings:
 25000ms is hearing, nothing happens
 81-88 lever presentation
 afterwards lever visible for 1000ms
+
+Possible solutions to the problem with individuality in rats shown by my population_avg data
+1. Normalization/Standardize between rats
+2. Rat-Specific Identifier as a feature
+3. Train individual models for each rat, then meta-learn
+4. Cluster Rats Based on Response Types
+5. Feature Engineering Focusing on patterns instead of raw data
+
+--------------------------------------------------------------------
+
+1. Normalization of rats.
+   The rats are already normalized. Probably not super helpful but I haven't tested it
+
+2. Clustering rats based on response types
+    I implemented this but never trained my model on it. Not sure If I want to continue with this.
+
+3. Feature Engineering Focusing on patterns instead of raw data
+    Currently implementing this. Particularly using contrastive learning, encoding the data. Performs fairly well.
+
+Would like to continue improving the feature engineering, that is truly where I believe my best results will come from.
+
+### Evaluation Metrics for Encoding / Contrastive Learning
+
+**Embedding Space Quality**
+t-SNE / UMAP Visualization: Plot embeddings in 2D/3D to see if similar classes cluster together.
+
+Cosine Similarity Analysis: Compute cosine similarity between embeddings of similar/dissimilar samples to see if the model is organizing them correctly.
+
+**Analyze Loss**
+If loss stagnates early, it may not be learning
+
+
+### Explore Ways to Use the Different Time Windows usefully
+
+**Learningable Attention Weights**
+Implement self-attention or a simple MLP to assign importance to bins.
+
+**Explicit Weighting Strategy**
+`weights = torch.tensor([0.5]*20 + [1.0]*60 + [0.7]*20).to(device)
+weighted_features = weights * feature_vector`
+
+**Contrastive Learning with Time-Aware sampling**
+Form positive pairs from different sections of the trial (e.g., compare pre-trial to main event).
+This forces the model to align neural activity across different times, extracting richer features.
+
+### Explore Using Dynamic Time Warping (DTW)
+
+How You Might Use DTW
+
+Preprocessing: Align trials using DTW before feeding them into the RNN.
+Distance Metric: Use DTW distance to define positive pairs in contrastive learning (closer sequences = positives).
+Hybrid Model: Train with NT-Xent, then fine-tune with DTW-based similarity.
+
+### Finally, things to look into:
+Use RNN for better sequential representations
+Try bidirectional GRU/LSTM for more context
+Use DTW for better alignment before contrastive learning
+Experiment with removing the projection head

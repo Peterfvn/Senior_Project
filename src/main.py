@@ -52,12 +52,13 @@ def main():
 
     optimizer = torch.optim.Adam(encoder.parameters(), lr=args.lr)
 
-    train_encoder(encoder, train_dataloader_encoder, optimizer, device, num_epochs=args.epochs)
+    train_encoder(encoder, train_dataloader_encoder, optimizer, device, num_epochs=100)
 
     model = TestClassifier(encoder, 128, 1)
     model = model.to(device)
 
     criterion = nn.BCEWithLogitsLoss() 
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     train_classifier(model, train_dataloader_decoder, optimizer, criterion, device, num_epochs=args.epochs)
     evaluate_classifier(model, test_dataloader, device)

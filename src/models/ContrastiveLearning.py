@@ -9,15 +9,14 @@ import numpy as np
 
 # Feature Extractor (explore MLP/RNN/CNN/etc)
 class FeatureExtractor(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, hidden_size, output_size, num_layers=1):
         super(FeatureExtractor, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, output_size)
+        self.rnn = nn.GRU(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
+        _, h_n = self.rnn(x)
+        return self.fc(h_n[-1])
     
 # Projection head for contrastive loss
 class ProjectionHead(nn.Module):
@@ -131,7 +130,7 @@ class TestClassifier(nn.Module):
     def forward(self, x):
         with torch.no_grad():
             features, _ = self.encoder(x)
-        return self.classifier(features)
+        return self.classifier(features).squeeze()
     
 def train_classifier(model, dataloader, optimizer, criterion, device, num_epochs=10):
     model.train()
@@ -170,7 +169,7 @@ def evaluate_classifier(model, dataloader, device):
 
             # Forawrd pass
             logits = model(x)
-            preds = logits.argmax(dim=1)
+            preds = (logits > 0).float()
             correct += (preds == y).sum().item()
             total += y.size(0)
 
