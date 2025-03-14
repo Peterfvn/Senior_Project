@@ -76,3 +76,9 @@ Currently, (x1, x2) are augmentations of the same sample, maybe:
     Generate positives from neighboring timesteps
     Mix data from similar samples (soft positives)
 Hard Negatives: Instead of just randomly sampling negatives, try hard negative mining (e.g., selecting negatives that are closest to positives).
+
+### Projection Head Improvements
+Explore adding more layers to the projection head
+Explore GeLU as opposed to ReLU (didn't perform very well)
+Explore different activation functions
+Explore Dropouts / Batchnorm / LayerNorm / Residual Connections
