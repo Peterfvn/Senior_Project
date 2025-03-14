@@ -40,7 +40,7 @@ def main():
 
     test_dataset = ContrastiveDataset(df, test_indices, augment=False)
 
-    train_dataloader_encoder = DataLoader(train_dataset_encoder, batch_size=args.batch_size, shuffle=True)
+    train_dataloader_encoder = DataLoader(train_dataset_encoder, batch_size=128, shuffle=True)
     train_dataloader_decoder = DataLoader(train_dataset_decoder, batch_size=args.batch_size, shuffle=True)
 
     test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
@@ -50,9 +50,9 @@ def main():
     encoder = ContrastiveModel(input_size=1, hidden_size=128, output_size=64, projection_dim=128)
     encoder = encoder.to(device)
 
-    optimizer = torch.optim.Adam(encoder.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(encoder.parameters(), lr=0.001)
 
-    train_encoder(encoder, train_dataloader_encoder, optimizer, device, num_epochs=100)
+    train_encoder(encoder, train_dataloader_encoder, optimizer, device, num_epochs=200, print=False)
 
     model = TestClassifier(encoder, 128, 1)
     model = model.to(device)
@@ -61,8 +61,8 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     train_classifier(model, train_dataloader_decoder, optimizer, criterion, device, num_epochs=args.epochs)
-    evaluate_classifier(model, test_dataloader, device)
-
+    accuracy = evaluate_classifier(model, test_dataloader, device)
+    print(f"Test Accuracy: {accuracy:.4f}")
 
 if __name__ == "__main__":
     main()

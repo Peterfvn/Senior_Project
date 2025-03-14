@@ -69,3 +69,10 @@ Use RNN for better sequential representations
 Try bidirectional GRU/LSTM for more context
 Use DTW for better alignment before contrastive learning
 Experiment with removing the projection head
+
+### More data augmentation
+Different Positive Pair Strategies:
+Currently, (x1, x2) are augmentations of the same sample, maybe:
+    Generate positives from neighboring timesteps
+    Mix data from similar samples (soft positives)
+Hard Negatives: Instead of just randomly sampling negatives, try hard negative mining (e.g., selecting negatives that are closest to positives).

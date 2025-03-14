@@ -11,7 +11,7 @@ import numpy as np
 class FeatureExtractor(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, num_layers=1):
         super(FeatureExtractor, self).__init__()
-        self.rnn = nn.GRU(input_size, hidden_size, num_layers, batch_first=True)
+        self.rnn = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, bidirectional=False)
         self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
@@ -28,11 +28,17 @@ class ProjectionHead(nn.Module):
     def __init__(self, input_dim, projection_dim):
         super(ProjectionHead, self).__init__()
         self.fc1 = nn.Linear(input_dim, projection_dim)
+        self.bn1 = nn.BatchNorm1d(projection_dim)
         self.fc2 = nn.Linear(projection_dim, projection_dim)
+        # self.layer_norm = nn.LayerNorm(projection_dim)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
+        x = self.fc1(x)
+        x = self.bn1(x)
+        x = F.gelu(x)
+
         x = self.fc2(x)
+        # x = self.layer_norm(x)
         return x
     
 # Contrastive learning model
@@ -48,7 +54,7 @@ class ContrastiveModel(nn.Module):
         return projections, features
     
 # Contrastive loss function
-def contrastive_loss(z1, z2, device, temperature=0.5):
+def contrastive_loss(z1, z2, device, temperature=0.7):
     """NT-Xent loss"""
     batch_size = z1.shape[0]
     z = torch.cat([z1, z2], dim=0) # Concat positive pairs
@@ -64,8 +70,11 @@ def contrastive_loss(z1, z2, device, temperature=0.5):
     loss = F.cross_entropy(sim_matrix / temperature, labels)
     return loss
 
-def train_encoder(model, dataloader, optimizer, device, num_epochs=10):
+def train_encoder(model, dataloader, optimizer, device, num_epochs=10, print=True):
+    import matplotlib.pyplot as plt # Temporary for visualization
     model.train()
+
+    losses = []
 
     for epoch in range(num_epochs):
         total_loss = 0
@@ -86,7 +95,21 @@ def train_encoder(model, dataloader, optimizer, device, num_epochs=10):
 
             total_loss += loss.item()
 
-        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {total_loss/len(dataloader):.4f}")
+        if print:
+            if epoch % 10 == 0:
+                print(f"Epoch {epoch+1}/{num_epochs}, Loss: {total_loss/len(dataloader):.4f}")
+
+        losses.append(total_loss/len(dataloader))
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(losses)
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.title("Contrastive Loss Over Time")
+    plt.tight_layout()
+
+    plt.savefig("contrastive_loss.png")
+    plt.close()
 
 def augment_data(x):
     """Augmentation for contrastive learning"""
@@ -180,4 +203,4 @@ def evaluate_classifier(model, dataloader, device):
             total += y.size(0)
 
     accuracy = correct / total
-    print(f"Test Accuracy: {accuracy:.4f}")
+    return accuracy
