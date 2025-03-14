@@ -15,8 +15,13 @@ class FeatureExtractor(nn.Module):
         self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
+        if x.dim() == 2: # Change shape to [batch, sequence, # features (1 in this case)]
+            x = x.unsqueeze(-1)
+
         _, h_n = self.rnn(x)
-        return self.fc(h_n[-1])
+        h_n = h_n[-1]
+        
+        return self.fc(h_n)
     
 # Projection head for contrastive loss
 class ProjectionHead(nn.Module):
@@ -39,7 +44,8 @@ class ContrastiveModel(nn.Module):
 
     def forward(self, x):
         features = self.encoder(x)
-        return self.projection(features), features
+        projections = self.projection(features)
+        return projections, features
     
 # Contrastive loss function
 def contrastive_loss(z1, z2, device, temperature=0.5):
@@ -97,7 +103,7 @@ def augment_data(x):
     return x
 
 class ContrastiveDataset(Dataset):
-    def __init__(self, data, indices, train=True, augment=True):
+    def __init__(self, data, indices, augment=True):
         self.data = data
         self.augment = augment
         self.indices = indices
