@@ -35,7 +35,7 @@ class ProjectionHead(nn.Module):
     def forward(self, x):
         x = self.fc1(x)
         x = self.bn1(x)
-        x = F.gelu(x)
+        x = F.relu(x)
 
         x = self.fc2(x)
         # x = self.layer_norm(x)
