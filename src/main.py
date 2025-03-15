@@ -40,7 +40,7 @@ def main():
 
     test_dataset = ContrastiveDataset(df, test_indices, augment=False)
 
-    train_dataloader_encoder = DataLoader(train_dataset_encoder, batch_size=128, shuffle=True)
+    train_dataloader_encoder = DataLoader(train_dataset_encoder, batch_size=256, shuffle=True)
     train_dataloader_decoder = DataLoader(train_dataset_decoder, batch_size=args.batch_size, shuffle=True)
 
     test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
@@ -52,7 +52,7 @@ def main():
 
     optimizer = torch.optim.Adam(encoder.parameters(), lr=0.001)
 
-    train_encoder(encoder, train_dataloader_encoder, optimizer, device, num_epochs=200, print=False)
+    train_encoder(encoder, train_dataloader_encoder, optimizer, device, num_epochs=200, print_bool=True)
 
     model = TestClassifier(encoder, 128, 1)
     model = model.to(device)
@@ -63,6 +63,13 @@ def main():
     train_classifier(model, train_dataloader_decoder, optimizer, criterion, device, num_epochs=args.epochs)
     accuracy = evaluate_classifier(model, test_dataloader, device)
     print(f"Test Accuracy: {accuracy:.4f}")
+    return accuracy
 
 if __name__ == "__main__":
-    main()
+    accuracies = []
+    for i in range(5):
+        accuracy = main()
+        accuracies.append(accuracy)
+
+    print(f"Average Accuracy: {np.mean(accuracies):.4f}")
+    print(f"Standard Deviation: {np.std(accuracies):.4f}")

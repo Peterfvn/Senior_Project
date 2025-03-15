@@ -82,3 +82,10 @@ Explore adding more layers to the projection head
 Explore GeLU as opposed to ReLU (didn't perform very well)
 Explore different activation functions
 Explore Dropouts / Batchnorm / LayerNorm / Residual Connections
+
+### Better Accuracy Metrics
+ROC-AUC: Use ROC-AUC to evaluate the model's ability to distinguish between positive and negative samples
+Stratified k-fold cross-validation: Use stratified sampling to ensure each fold has a similar distribution of classes.
+**Comparing Two Models**
+**Paired t-test (if running multiple trials per model).**
+**Wilcoxon signed-rank test (non-parametric alternative).**

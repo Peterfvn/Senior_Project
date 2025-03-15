@@ -25,20 +25,35 @@ class FeatureExtractor(nn.Module):
     
 # Projection head for contrastive loss
 class ProjectionHead(nn.Module):
-    def __init__(self, input_dim, projection_dim):
+    def __init__(self, input_dim, projection_dim, hidden_dim=256, dropout=0.1):
         super(ProjectionHead, self).__init__()
-        self.fc1 = nn.Linear(input_dim, projection_dim)
-        self.bn1 = nn.BatchNorm1d(projection_dim)
-        self.fc2 = nn.Linear(projection_dim, projection_dim)
-        # self.layer_norm = nn.LayerNorm(projection_dim)
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.bn1 = nn.BatchNorm1d(hidden_dim)
+        self.dropout1 = nn.Dropout(dropout)
+
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.bn2 = nn.BatchNorm1d(hidden_dim)
+        self.dropout2 = nn.Dropout(dropout)
+
+        self.fc3 = nn.Linear(hidden_dim, projection_dim)
+        self.layer_norm = nn.LayerNorm(projection_dim)
 
     def forward(self, x):
         x = self.fc1(x)
         x = self.bn1(x)
         x = F.relu(x)
+        x = self.dropout1(x)
 
+        residual = x
         x = self.fc2(x)
-        # x = self.layer_norm(x)
+        x = self.bn2(x)
+        x = F.relu(x)
+        x = self.dropout2(x)
+        x += residual
+
+        x = self.fc3(x)
+        x = self.layer_norm(x)
+
         return x
     
 # Contrastive learning model
@@ -70,7 +85,7 @@ def contrastive_loss(z1, z2, device, temperature=0.7):
     loss = F.cross_entropy(sim_matrix / temperature, labels)
     return loss
 
-def train_encoder(model, dataloader, optimizer, device, num_epochs=10, print=True):
+def train_encoder(model, dataloader, optimizer, device, num_epochs=10, print_bool=True):
     import matplotlib.pyplot as plt # Temporary for visualization
     model.train()
 
@@ -95,7 +110,7 @@ def train_encoder(model, dataloader, optimizer, device, num_epochs=10, print=Tru
 
             total_loss += loss.item()
 
-        if print:
+        if print_bool:
             if epoch % 10 == 0:
                 print(f"Epoch {epoch+1}/{num_epochs}, Loss: {total_loss/len(dataloader):.4f}")
 
