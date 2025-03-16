@@ -162,8 +162,13 @@ def main():
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+    print("Training Class Distribution:", np.bincount(y_train.astype(int)))
+    print("Test Class Distribution:", np.bincount(y_test.astype(int)))
+
+
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import accuracy_score, classification_report
+    from sklearn.ensemble import RandomForestClassifier
 
     clf = LogisticRegression(max_iter=500)
     clf.fit(X_train, y_train)
