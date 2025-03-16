@@ -54,8 +54,8 @@ def main():
 
 
     train_encoder(encoder, train_dataloader_encoder, optimizer, device, num_epochs=200, print_bool=True)
-    evaluate_encoder(encoder, test_dataloader, device)
-    return # Breakpoint for t-SNE visualization
+    # evaluate_encoder(encoder, test_dataloader, device)
+    # return # Breakpoint for t-SNE visualization
 
     model = TestClassifier(encoder, 128, 1)
     model = model.to(device)
@@ -69,8 +69,9 @@ def main():
     return accuracy
 
 if __name__ == "__main__":
-    visualize_flag = False
-    main()
+    visualize_flag = True
+    if not visualize_flag:
+        main()
 
     # True is training model
     if visualize_flag:

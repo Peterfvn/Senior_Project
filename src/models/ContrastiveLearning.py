@@ -78,7 +78,7 @@ class ContrastiveModel(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, projection_dim):
         super(ContrastiveModel, self).__init__()
         self.encoder = FeatureExtractor(input_size, hidden_size, output_size)
-        self.projection = SimplerHead(output_size, projection_dim)
+        self.projection = ProjectionHead(output_size, projection_dim)
 
     def forward(self, x):
         features = self.encoder(x)
@@ -86,7 +86,7 @@ class ContrastiveModel(nn.Module):
         return projections, features
     
 # Contrastive loss function
-def contrastive_loss(z1, z2, device, temperature=0.7):
+def contrastive_loss(z1, z2, y, device, temperature=0.7, hard_negative_weight=0.5):
     """NT-Xent loss"""
     batch_size = z1.shape[0]
     z = torch.cat([z1, z2], dim=0) # Concat positive pairs
@@ -95,11 +95,20 @@ def contrastive_loss(z1, z2, device, temperature=0.7):
     sim_matrix = F.cosine_similarity(z.unsqueeze(1), z.unsqueeze(0), dim=2)
 
     # Labels (Positives on diagonal)
-    labels = torch.arange(batch_size).to(device)
-    labels = torch.cat([labels, labels], dim=0) # Duplicate for both augmented views
+    labels = torch.cat([y, y], dim=0).long().to(device)
+    labels_matrix = (labels.unsqueeze(0) == labels.unsqueeze(1)).float() # Create a matrix of labels
 
-    # Apply contrastive loss
-    loss = F.cross_entropy(sim_matrix / temperature, labels)
+    # Identify hard negatives: negatives with high similarity but different labels
+    hard_negatives = (sim_matrix > 0.5) & (labels_matrix == 0)
+    hard_negatives = hard_negatives.float() * hard_negative_weight
+
+    # Create loss weights (increase weight for hard negatives)
+    loss_weights = 1 - labels_matrix + hard_negatives
+
+    # Apply contrastive loss with weighting
+    loss = F.cross_entropy(sim_matrix / temperature, labels, reduction='none')
+    loss = (loss * loss_weights).mean()
+
     return loss
 
 def train_encoder(model, dataloader, optimizer, device, num_epochs=10, print_bool=True):
@@ -110,15 +119,16 @@ def train_encoder(model, dataloader, optimizer, device, num_epochs=10, print_boo
 
     for epoch in range(num_epochs):
         total_loss = 0
-        for x1, x2 in dataloader: # x1 and x2 should be augmented views of same sample
-            x1, x2 = x1.to(device), x2.to(device)
+        for batch in dataloader: # x1 and x2 should be augmented views of same sample
+            (x1, x2), y = batch  # Explicit unpacking
+            x1, x2, y = x1.to(device), x2.to(device), y.to(device)
 
             # Embeddings
             z1, _ = model(x1)
             z2, _ = model(x2)
 
             # Contrastive loss
-            loss = contrastive_loss(z1, z2, device)
+            loss = contrastive_loss(z1, z2, y, device)
             
             # Backprop
             optimizer.zero_grad()
@@ -145,16 +155,74 @@ def train_encoder(model, dataloader, optimizer, device, num_epochs=10, print_boo
 
 def augment_data(x):
     """Augmentation for contrastive learning"""
+    from scipy.interpolate import interp1d
+
     def scaling(x, scale_factor=0.1):
         scale = 1.0 + (torch.randn(1, device=x.device) * scale_factor)
         return x * scale
+    
     def jitter(x, sigma=0.05):
         return x + torch.randn_like(x) * sigma
+    
     def batch_shuffle(x):
         return x[torch.randperm(x.shape[0])]
+
+    def add_noise_pre_tone(x, pre_tone_length=20, sigma=0.05):
+        """
+        Adds Gaussian noise only to the pre-tone phase.
+        x: Input time-series tensor of shape [sequence_length].
+        pre_tone_length: How long the pre-tone phase lasts.
+        sigma: Standard deviation of Gaussian noise.
+        """
+        noise = torch.randn(pre_tone_length, device=x.device) * sigma
+        x[:pre_tone_length] += noise
+        return x
+    
+    def permute_segments(x, segment_length=10):
+        """
+        Randomly swaps two adjacent segments in the sequence.
+        x: Input time-series tensor of shape [sequence_length].
+        segment_length: Defines how many time points belong to each segment.
+        """
+        seq_len = x.shape[0]
+        
+        if seq_len < 2 * segment_length:
+            return x  # No permutation if sequence is too short
+        
+        # Randomly choose a point to swap segments
+        swap_idx = np.random.randint(0, seq_len - 2 * segment_length + 1)
+        
+        x_copy = x.clone()
+        x_copy[swap_idx : swap_idx + segment_length], x_copy[swap_idx + segment_length : swap_idx + 2 * segment_length] = \
+            x_copy[swap_idx + segment_length : swap_idx + 2 * segment_length], x_copy[swap_idx : swap_idx + segment_length]
+        
+        return x_copy
+
+    def time_warp(x, sigma=0.2):
+        seq_len = x.shape[0]
+        time_steps = np.arange(seq_len)
+        warp_factor = 1.0 + np.random.uniform(-sigma, sigma)
+        new_time_steps = np.clip(time_steps * warp_factor, 0, seq_len - 1)
+
+        interp = interp1d(time_steps, x.cpu().numpy(), kind='linear', fill_value="extrapolate")
+        warped_x = torch.tensor(interp(new_time_steps), dtype=x.dtype, device=x.device)
+
+        return warped_x
+    
+    
     x = jitter(x, sigma=0.05)
     x = scaling(x, scale_factor=0.1)
 
+    # if torch.rand(1) > 0.5:
+    #     x = time_warp(x, sigma=0.2)
+
+    # if torch.rand(1) > 0.5:
+    #     x = permute_segments(x, segment_length=10)
+
+    # if torch.rand(1) > 0.5:
+    #     x = add_noise_pre_tone(x)
+
+    
     return x
 
 class ContrastiveDataset(Dataset):
@@ -177,7 +245,7 @@ class ContrastiveDataset(Dataset):
         if self.augment: # Contrastive
             x1 = augment_data(x)
             x2 = augment_data(x)
-            return x1, x2
+            return (x1, x2), y
         else:
             return x, y # Classification
     
@@ -255,7 +323,7 @@ def evaluate_encoder(model, dataloader, device):
             embeddings.append(model.encoder(x).cpu().numpy())
             labels.append(y.cpu().numpy())
 
-    tsne = TSNE(n_components=2, perplexity=30, random_state=42)
+    tsne = TSNE(n_components=2, perplexity=30, random_state=42, learning_rate=200, max_iter=3000)
     embeddings = np.concatenate(embeddings)
     embeddings = normalize(embeddings, axis=1)
     embeddings_2d = tsne.fit_transform(embeddings)
