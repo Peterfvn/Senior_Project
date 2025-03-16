@@ -41,13 +41,13 @@ class ProjectionHead(nn.Module):
     def forward(self, x):
         x = self.fc1(x)
         x = self.bn1(x)
-        x = F.relu(x)
+        x = F.gelu(x)
         x = self.dropout1(x)
 
         residual = x
         x = self.fc2(x)
         x = self.bn2(x)
-        x = F.relu(x)
+        x = F.gelu(x)
         x = self.dropout2(x)
         x += residual
 
@@ -56,12 +56,29 @@ class ProjectionHead(nn.Module):
 
         return x
     
+class SimplerHead(nn.Module):
+    def __init__(self, input_dim, projection_dim, hidden_dim=256):
+        super(SimplerHead, self).__init__()
+        self.fc = nn.Linear(input_dim, hidden_dim)
+        self.bn = nn.BatchNorm1d(hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, projection_dim)
+        self.layer_norm = nn.LayerNorm(projection_dim)
+    
+    def forward(self, x):
+        x = self.fc(x)
+        x = self.bn(x)
+        x = F.relu(x)
+        x = self.fc2(x)
+        x = self.layer_norm(x)
+        return x
+    
+
 # Contrastive learning model
 class ContrastiveModel(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, projection_dim):
         super(ContrastiveModel, self).__init__()
         self.encoder = FeatureExtractor(input_size, hidden_size, output_size)
-        self.projection = ProjectionHead(output_size, projection_dim)
+        self.projection = SimplerHead(output_size, projection_dim)
 
     def forward(self, x):
         features = self.encoder(x)
@@ -224,6 +241,7 @@ def evaluate_encoder(model, dataloader, device):
     """Plotting embeddings using t-SNE"""
     from sklearn.manifold import TSNE
     import matplotlib.pyplot as plt
+    from sklearn.preprocessing import normalize
 
     # Use unaugmented test data
     model.eval()
@@ -238,7 +256,9 @@ def evaluate_encoder(model, dataloader, device):
             labels.append(y.cpu().numpy())
 
     tsne = TSNE(n_components=2, perplexity=30, random_state=42)
-    embeddings_2d = tsne.fit_transform(np.concatenate(embeddings))
+    embeddings = np.concatenate(embeddings)
+    embeddings = normalize(embeddings, axis=1)
+    embeddings_2d = tsne.fit_transform(embeddings)
     labels = np.concatenate(labels)
 
     plt.figure(figsize=(10, 8))

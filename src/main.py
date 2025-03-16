@@ -69,13 +69,15 @@ def main():
     return accuracy
 
 if __name__ == "__main__":
-    # Modified the current version of main() to show show t-SNE graph
+    visualize_flag = False
     main()
 
-    # accuracies = []
-    # for i in range(5):
-    #     accuracy = main()
-    #     accuracies.append(accuracy)
+    # True is training model
+    if visualize_flag:
+        accuracies = []
+        for i in range(5):
+            accuracy = main()
+            accuracies.append(accuracy)
 
-    # print(f"Average Accuracy: {np.mean(accuracies):.4f}")
-    # print(f"Standard Deviation: {np.std(accuracies):.4f}")
+        print(f"Average Accuracy: {np.mean(accuracies):.4f}")
+        print(f"Standard Deviation: {np.std(accuracies):.4f}")
