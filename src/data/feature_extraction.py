@@ -57,7 +57,7 @@ def visualize_features(df_features):
     fig.legend(handles, labels, loc='upper left', fontsize=12)
 
     plt.tight_layout()
-    plt.savefig("feature_distributions.png")
+    plt.savefig("R1Norm_feature_distributions.png")
     plt.close()
 
 def PCA_analysis(scaled_features, labels, name):
@@ -99,12 +99,25 @@ def UMAP_analysis(x_scaled, labels, name):
     plt.savefig(name)
     plt.close()
 
-if __name__ == "__main__":
-    df = load_file('PFC_con_4.csv')
-    df = clean_data(df)
-    df = trial_avg(df)
+def normalize_by_rat_features(df):
+    df_norm = df.copy()
+    for rat in df["rat"].unique():
+        mask = df["rat"] == rat
+        feature_columns = [col for col in df.columns if col not in ["rat", "label"]]
+        df_norm.loc[mask, feature_columns] = StandardScaler().fit_transform(df.loc[mask, feature_columns])
+    return df_norm
 
-    # Every rat now
+def normalize_by_rat(df):
+    df_norm = df.copy()
+    for rat in df[df.columns[0]].unique():
+        mask = df[df.columns[0]] == rat
+        df_norm.loc[mask, df.columns[5:]] = StandardScaler().fit_transform(df.loc[mask, df.columns[5:]])
+    return df_norm
+
+def plotting(df):
+    # Look at only R3 
+    df = df[df[df.columns[0]] == 3]
+    df = df.reset_index(drop=True)
     df_labels = df[df.columns[4]]
 
     # Extract features
@@ -114,24 +127,85 @@ if __name__ == "__main__":
     # Standardize the features
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(features.drop(columns=["label"]))
-    X_scaled_important = scaler.fit_transform(features[['mad']])
+    X_scaled_important = scaler.fit_transform(features[['mad', 'std']])
 
     visualize_features(features)
-    PCA_analysis(X_scaled, df_labels, "All_PCA_features.png")
+    PCA_analysis(X_scaled, df_labels, "R3_PCA_features.png")
 
-    tSNE_analysis(X_scaled, df_labels, "All_tSNE_features.png")
-    tSNE_analysis(X_scaled_important, df_labels, "All_tSNE_important_features.png")
+    tSNE_analysis(X_scaled, df_labels, "R3_tSNE_features.png")
+    tSNE_analysis(X_scaled_important, df_labels, "R3_tSNE_important_features.png")
 
-    UMAP_analysis(X_scaled, df_labels, "All_UMAP_features.png")
-    UMAP_analysis(X_scaled_important, df_labels, "All_UMAP_important_features.png")
+    UMAP_analysis(X_scaled, df_labels, "R3_UMAP_features.png")
+    UMAP_analysis(X_scaled_important, df_labels, "R3_UMAP_important_features.png")
 
-    significant_features = []
-    for feature in features.columns[:-1]:
-        t_stat, p_value = stats.ttest_ind(features[feature][features["label"] == 0],
-                                           features[feature][features["label"] == 1], nan_policy='omit')
-        if p_value < 0.05:
-            significant_features.append((feature, p_value))
+def main():
+    """Train a simple logistic regression model using the feature extraction"""
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from sklearn.model_selection import train_test_split
 
-    print("Significant Features (p < 0.05):")
-    for feat, p_val in significant_features:
-        print(f"{feat}: p-value = {p_val:.4f}")
+    df = load_file('PFC_con_4.csv')
+    df = clean_data(df)
+    df = trial_avg(df)
+
+    df_labels = df[df.columns[4]]
+    df_features = extract_general_features(df)
+    df_features["label"] = df_labels
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(df_features.drop(columns=["label"]))
+    X_scaled_important = scaler.fit_transform(df_features[['mean', 'latency_to_first_peak']])
+
+    X = X_scaled
+    y = df_features["label"].values
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import accuracy_score, classification_report
+
+    clf = LogisticRegression(max_iter=500)
+    clf.fit(X_train, y_train)
+
+    y_pred = clf.predict(X_test)
+    print("Test Accuracy:", accuracy_score(y_test, y_pred))
+    print(classification_report(y_test, y_pred))
+
+if __name__ == "__main__":
+    main()
+
+
+    # df = load_file('PFC_con_4.csv')
+    # df = clean_data(df)
+    # df = trial_avg(df)
+
+    # rats = df.iloc[:, 0]
+    # df_labels = df[df.columns[4]]
+
+    # norm_df = df[df[df.columns[0]] == 1]
+    # # norm_df = normalize_by_rat(norm_df)
+    # df_labels = norm_df[norm_df.columns[4]]
+
+    # features = extract_general_features(norm_df)
+    # features["label"] = df_labels
+    # # features.insert(0, "rat", rats)
+
+    # # No longer normalizing after feature extraction
+    # # features = normalize_by_rat(features)
+
+    # scaler = StandardScaler()
+    # X_scaled = scaler.fit_transform(features.drop(columns=["label"]))
+    # X_scaled_important = scaler.fit_transform(features[['mean', 'latency_to_first_peak']])
+
+    # feature_columns = [col for col in features.columns if col not in ["rat", "label"]]
+    # significant_features = []
+    # for feature in feature_columns:
+    #     t_stat, p_value = stats.ttest_ind(features[feature][features["label"] == 0],
+    #                                        features[feature][features["label"] == 1], nan_policy='omit')
+    #     if p_value < 0.05:
+    #         significant_features.append((feature, p_value))
+
+    # print("Significant Features (p < 0.05):")
+    # for feat, p_val in significant_features:
+    #     print(f"{feat}: p-value = {p_val:.4f}")
