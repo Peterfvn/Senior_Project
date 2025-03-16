@@ -52,7 +52,10 @@ def main():
 
     optimizer = torch.optim.Adam(encoder.parameters(), lr=0.001)
 
+
     train_encoder(encoder, train_dataloader_encoder, optimizer, device, num_epochs=200, print_bool=True)
+    evaluate_encoder(encoder, test_dataloader, device)
+    return # Breakpoint for t-SNE visualization
 
     model = TestClassifier(encoder, 128, 1)
     model = model.to(device)
@@ -66,10 +69,13 @@ def main():
     return accuracy
 
 if __name__ == "__main__":
-    accuracies = []
-    for i in range(5):
-        accuracy = main()
-        accuracies.append(accuracy)
+    # Modified the current version of main() to show show t-SNE graph
+    main()
 
-    print(f"Average Accuracy: {np.mean(accuracies):.4f}")
-    print(f"Standard Deviation: {np.std(accuracies):.4f}")
+    # accuracies = []
+    # for i in range(5):
+    #     accuracy = main()
+    #     accuracies.append(accuracy)
+
+    # print(f"Average Accuracy: {np.mean(accuracies):.4f}")
+    # print(f"Standard Deviation: {np.std(accuracies):.4f}")

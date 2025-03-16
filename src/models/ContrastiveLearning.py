@@ -219,3 +219,31 @@ def evaluate_classifier(model, dataloader, device):
 
     accuracy = correct / total
     return accuracy
+
+def evaluate_encoder(model, dataloader, device):
+    """Plotting embeddings using t-SNE"""
+    from sklearn.manifold import TSNE
+    import matplotlib.pyplot as plt
+
+    # Use unaugmented test data
+    model.eval()
+    model = model.to(device)
+
+    embeddings = []
+    labels = []
+    with torch.no_grad():
+        for x, y in dataloader:
+            x, y = x.to(device), y.to(device)
+            embeddings.append(model.encoder(x).cpu().numpy())
+            labels.append(y.cpu().numpy())
+
+    tsne = TSNE(n_components=2, perplexity=30, random_state=42)
+    embeddings_2d = tsne.fit_transform(np.concatenate(embeddings))
+    labels = np.concatenate(labels)
+
+    plt.figure(figsize=(10, 8))
+    plt.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], c=labels, cmap='viridis')
+    plt.colorbar()
+    plt.title("t-SNE Visualization of Embeddings")
+    plt.savefig("tsne_embeddings.png")
+    plt.close()
