@@ -48,12 +48,12 @@ def visualize_features(df_features):
     
     for i, feature in enumerate(df_features.columns[:-1]):
         axes[i].hist([df_features[feature][df_features["label"] == 0],
-                      df_features[feature][df_features["label"] == 1]], bins=20, label=["Negative", "Positive"], alpha=0.7)
+                      df_features[feature][df_features["label"] == 1]], bins=20, label=["No Press", "Press"], alpha=0.7)
         axes[i].set_title(feature)
     
     # Add global legend
     handles = [plt.Rectangle((0,0),1,1, color="blue", alpha=0.8), plt.Rectangle((0,0),1,1, color="orange", alpha=0.8)]
-    labels = ["Negative", "Positive"]
+    labels = ["No Press", "Press"]
     fig.legend(handles, labels, loc='upper left', fontsize=12)
 
     plt.tight_layout()
@@ -104,27 +104,26 @@ if __name__ == "__main__":
     df = clean_data(df)
     df = trial_avg(df)
 
-    # Look at just rat one
-    rat_one_df = df[df[df.columns[0]] == 1]
-    one_df_labels = rat_one_df[rat_one_df.columns[4]].values
+    # Every rat now
+    df_labels = df[df.columns[4]]
 
     # Extract features
-    features = extract_general_features(rat_one_df)
-    features["label"] = one_df_labels
+    features = extract_general_features(df)
+    features["label"] = df_labels
 
     # Standardize the features
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(features.drop(columns=["label"]))
-    X_scaled_important = scaler.fit_transform(features[['mean', 'mean_peak_height', 'pre_post_ratio']])
+    X_scaled_important = scaler.fit_transform(features[['mad']])
 
     visualize_features(features)
-    PCA_analysis(X_scaled, one_df_labels, "PCA_features.png")
+    PCA_analysis(X_scaled, df_labels, "All_PCA_features.png")
 
-    tSNE_analysis(X_scaled, one_df_labels, "tSNE_features.png")
-    tSNE_analysis(X_scaled_important, one_df_labels, "tSNE_important_features.png")
+    tSNE_analysis(X_scaled, df_labels, "All_tSNE_features.png")
+    tSNE_analysis(X_scaled_important, df_labels, "All_tSNE_important_features.png")
 
-    UMAP_analysis(X_scaled, one_df_labels, "UMAP_features.png")
-    UMAP_analysis(X_scaled_important, one_df_labels, "UMAP_important_features.png")
+    UMAP_analysis(X_scaled, df_labels, "All_UMAP_features.png")
+    UMAP_analysis(X_scaled_important, df_labels, "All_UMAP_important_features.png")
 
     significant_features = []
     for feature in features.columns[:-1]:
