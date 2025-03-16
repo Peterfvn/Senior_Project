@@ -86,7 +86,7 @@ class ContrastiveModel(nn.Module):
         return projections, features
     
 # Contrastive loss function
-def contrastive_loss(z1, z2, y, device, temperature=0.7, hard_negative_weight=0.5):
+def contrastive_loss(z1, z2, y, device, temperature=0.7, hard_negative_weight=0.2):
     """NT-Xent loss"""
     batch_size = z1.shape[0]
     z = torch.cat([z1, z2], dim=0) # Concat positive pairs
@@ -111,6 +111,22 @@ def contrastive_loss(z1, z2, y, device, temperature=0.7, hard_negative_weight=0.
 
     return loss
 
+def contrastive_loss_old(z1, z2, y, device, temperature=0.7):
+    """Old Contrastive loss functionw without hard negatives"""
+    batch_size = z1.shape[0]
+    z = torch.cat([z1, z2], dim=0) # Concat positive pairs
+ 
+    # Similararity matrix
+    sim_matrix = F.cosine_similarity(z.unsqueeze(1), z.unsqueeze(0), dim=2)
+ 
+    # Labels (Positives on diagonal
+    labels = torch.arange(batch_size).to(device)
+    labels = torch.cat([labels, labels], dim=0) # Duplicate for both augmented views
+ 
+    # Apply contrastive loss
+    loss = F.cross_entropy(sim_matrix / temperature, labels)
+    return loss
+
 def train_encoder(model, dataloader, optimizer, device, num_epochs=10, print_bool=True):
     import matplotlib.pyplot as plt # Temporary for visualization
     model.train()
@@ -128,7 +144,7 @@ def train_encoder(model, dataloader, optimizer, device, num_epochs=10, print_boo
             z2, _ = model(x2)
 
             # Contrastive loss
-            loss = contrastive_loss(z1, z2, y, device)
+            loss = contrastive_loss_old(z1, z2, y, device)
             
             # Backprop
             optimizer.zero_grad()
@@ -231,7 +247,7 @@ class ContrastiveDataset(Dataset):
         self.augment = augment
         self.indices = indices
 
-        self.labels = torch.tensor(self.data.iloc[indices][self.data.columns[4]].values, dtype=torch.float32)
+        self.labels = torch.tensor(self.data.iloc[indices][self.data.columns[3]].values, dtype=torch.float32)
 
         self.features = torch.tensor(self.data.iloc[indices, 5:].values, dtype=torch.float32)
 
