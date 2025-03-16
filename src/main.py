@@ -29,6 +29,11 @@ def main():
     df = clean_data(df)
     df = trial_avg(df)
 
+    print(df)
+    total_presses = df[df.columns[4]].sum()
+    print(f"Press Ratio: {total_presses / 700}")
+    return
+
     np.random.seed(42)
     indices = np.random.permutation(len(df))
     split_idx =  int(0.8 * len(df))
