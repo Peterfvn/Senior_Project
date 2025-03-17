@@ -139,7 +139,10 @@ def plotting(df):
     UMAP_analysis(X_scaled_important, df_labels, "R3_UMAP_important_features.png")
 
 def main():
-    """Train a simple logistic regression model using the feature extraction"""
+    """
+    Train a simple logistic regression / random forest model using the feature extraction
+    This is to demonstrate if the feature extraction is useful for classification
+    """
     import torch
     import torch.nn as nn
     import torch.optim as optim
@@ -170,7 +173,8 @@ def main():
     from sklearn.metrics import accuracy_score, classification_report
     from sklearn.ensemble import RandomForestClassifier
 
-    clf = RandomForestClassifier(n_estimators=100, random_state=42)
+    # clf = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
+    clf = LogisticRegression(random_state=42, class_weight='balanced')
     clf.fit(X_train, y_train)
 
     y_pred = clf.predict(X_test)

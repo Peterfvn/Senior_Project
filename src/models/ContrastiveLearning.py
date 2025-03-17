@@ -306,20 +306,38 @@ def train_classifier(model, dataloader, optimizer, criterion, device, num_epochs
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {total_loss/len(dataloader):.4f}, Accuracy: {correct/len(dataloader.dataset):.4f}")
 
 def evaluate_classifier(model, dataloader, device):
+    from sklearn.metrics import precision_score, recall_score, f1_score
     model.eval()
     correct, total = 0, 0
+    y_true, y_pred = [], []
     with torch.no_grad():
         for x, y in dataloader:
             x, y = x.to(device), y.to(device)
 
             # Forawrd pass
             logits = model(x)
-            preds = (logits > 0).float()
+            preds = (torch.sigmoid(logits) > 0.5).float()
+
+            # Store predictions and labels
+            y_true.extend(y.cpu().numpy())
+            y_pred.extend(preds.cpu().numpy())
+
+            # Compute accuracy
             correct += (preds == y).sum().item()
             total += y.size(0)
 
     accuracy = correct / total
-    return accuracy
+
+    # Convert lists to numpy arrays for classification report
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+
+    # Compute classification report
+    precision = precision_score(y_true, y_pred, average='weighted')
+    recall = recall_score(y_true, y_pred, average='weighted')
+    f1 = f1_score(y_true, y_pred, average='weighted')
+
+    return accuracy, precision, recall, f1
 
 def evaluate_encoder(model, dataloader, device):
     """Plotting embeddings using t-SNE"""

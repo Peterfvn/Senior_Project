@@ -29,11 +29,6 @@ def main():
     df = clean_data(df)
     df = trial_avg(df)
 
-    print(df)
-    total_presses = df[df.columns[4]].sum()
-    print(f"Press Ratio: {total_presses / 700}")
-    return
-
     np.random.seed(42)
     indices = np.random.permutation(len(df))
     split_idx =  int(0.8 * len(df))
@@ -59,8 +54,8 @@ def main():
 
 
     train_encoder(encoder, train_dataloader_encoder, optimizer, device, num_epochs=200, print_bool=True)
-    evaluate_encoder(encoder, test_dataloader, device)
-    return # Breakpoint for t-SNE visualization
+    # evaluate_encoder(encoder, test_dataloader, device)
+    # return # Breakpoint for t-SNE visualization
 
     model = TestClassifier(encoder, 128, 1)
     model = model.to(device)
@@ -69,21 +64,26 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     train_classifier(model, train_dataloader_decoder, optimizer, criterion, device, num_epochs=args.epochs)
-    accuracy = evaluate_classifier(model, test_dataloader, device)
+    accuracy, precision, recall, f1 = evaluate_classifier(model, test_dataloader, device)
     print(f"Test Accuracy: {accuracy:.4f}")
-    return accuracy
+    return accuracy, precision, recall, f1
 
 if __name__ == "__main__":
-    visualize_flag = False
+    visualize_flag = True
     if not visualize_flag:
         main()
 
     # True is training model
     if visualize_flag:
-        accuracies = []
+        accuracies, precisions, recalls, f1s = [], [], [], []
         for i in range(5):
-            accuracy = main()
+            accuracy, precision, recall, f1 = main()
             accuracies.append(accuracy)
+            precisions.append(precision)
+            recalls.append(recall)
+            f1s.append(f1)
 
-        print(f"Average Accuracy: {np.mean(accuracies):.4f}")
-        print(f"Standard Deviation: {np.std(accuracies):.4f}")
+        print(f"Average Accuracy: {np.mean(accuracies):.4f}, Std: {np.std(accuracies):.4f}")
+        print(f"Average Precision: {np.mean(precisions):.4f}, Std: {np.std(precisions):.4f}")
+        print(f"Average Recall: {np.mean(recalls):.4f}, Std: {np.std(recalls):.4f}")
+        print(f"Average F1: {np.mean(f1s):.4f}, Std: {np.std(f1s):.4f}")
