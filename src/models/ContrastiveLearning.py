@@ -247,7 +247,7 @@ class ContrastiveDataset(Dataset):
         self.augment = augment
         self.indices = indices
 
-        self.labels = torch.tensor(self.data.iloc[indices][self.data.columns[3]].values, dtype=torch.float32)
+        self.labels = torch.tensor(self.data.iloc[indices][self.data.columns[4]].values, dtype=torch.float32)
 
         self.features = torch.tensor(self.data.iloc[indices, 5:].values, dtype=torch.float32)
 
