@@ -37,7 +37,7 @@ class PositionalEncoding(nn.Module):
         return x + self.pe[:, :x.size(1), :].to(x.device) # Add positional encoding to the input
     
 class AttentionFeatureExtractor(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, num_heads=4):
+    def __init__(self, input_size, hidden_size, output_size, num_heads=4, max_len=100):
         super(AttentionFeatureExtractor, self).__init__()
 
         self.input_projection = nn.Linear(input_size, hidden_size)
@@ -45,6 +45,9 @@ class AttentionFeatureExtractor(nn.Module):
         self.attention = nn.MultiheadAttention(embed_dim=hidden_size, num_heads=num_heads, batch_first=True)
         self.fc = nn.Linear(hidden_size, output_size)
         self.layer_norm = nn.LayerNorm(hidden_size)
+
+        # Learnable pooling weights
+        self.pooling_weights = nn.Parameter(torch.ones(max_len))
 
     def forward(self, x):
         if x.dim() == 2:
@@ -56,7 +59,10 @@ class AttentionFeatureExtractor(nn.Module):
         attn_output, _ = self.attention(x, x, x) # Self-Attention across time steps
         attn_output = self.layer_norm(attn_output + x) # Residual Connection & normalizaiton
 
-        pooled_output = attn_output.mean(dim=1) # Aggregate time step info
+        weights = F.softmax(self.pooling_weights[:attn_output.size(1)], dim=0)
+        pooled_output = torch.sum(attn_output * weights.unsqueeze(0).unsqueeze(-1), dim=1)
+
+        # pooled_output = attn_output.mean(dim=1) # Aggregate time step info
         return self.fc(pooled_output) # Map to the final output embedding
     
 # Projection head for contrastive loss

@@ -22,7 +22,7 @@ def parse_args():
                       help='label type: 1 for Press, 0 for DS+/DS- (default: 1)')
     return parser.parse_args()
 
-def main():
+def main(flag=False):
     """Focus on feature extraction from clustering"""
     args = parse_args()
     df = load_file('PFC_con_4.csv')
@@ -54,8 +54,9 @@ def main():
 
 
     train_encoder(encoder, train_dataloader_encoder, optimizer, device, num_epochs=200, print_bool=True)
-    # evaluate_encoder(encoder, test_dataloader, device)
-    # return # Breakpoint for t-SNE visualization
+    if flag:
+        evaluate_encoder(encoder, test_dataloader, device)
+        return # Breakpoint for t-SNE visualization
 
     model = TestClassifier(encoder, 128, 1)
     model = model.to(device)
@@ -69,15 +70,15 @@ def main():
     return accuracy, precision, recall, f1
 
 if __name__ == "__main__":
-    visualize_flag = True
+    visualize_flag = False
     if not visualize_flag:
-        main()
+        main(True)
 
     # True is training model
     if visualize_flag:
         accuracies, precisions, recalls, f1s = [], [], [], []
         for i in range(5):
-            accuracy, precision, recall, f1 = main()
+            accuracy, precision, recall, f1 = main(False)
             accuracies.append(accuracy)
             precisions.append(precision)
             recalls.append(recall)
