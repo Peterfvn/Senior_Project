@@ -23,6 +23,42 @@ class FeatureExtractor(nn.Module):
         
         return self.fc(h_n)
     
+class PositionalEncoding(nn.Module):
+    def __init__(self, hidden_size, max_len=100):
+        super(PositionalEncoding, self).__init__()
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, hidden_size, 2) * (-np.log(10000.0) / hidden_size))
+        pe = torch.zeros(max_len, hidden_size)
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        self.pe = pe.unsqueeze(0) # Shape: (1, max_len, hidden_size)
+
+    def forward(self, x):
+        return x + self.pe[:, :x.size(1), :].to(x.device) # Add positional encoding to the input
+    
+class AttentionFeatureExtractor(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, num_heads=4):
+        super(AttentionFeatureExtractor, self).__init__()
+
+        self.input_projection = nn.Linear(input_size, hidden_size)
+        self.positional_encoding = PositionalEncoding(hidden_size)
+        self.attention = nn.MultiheadAttention(embed_dim=hidden_size, num_heads=num_heads, batch_first=True)
+        self.fc = nn.Linear(hidden_size, output_size)
+        self.layer_norm = nn.LayerNorm(hidden_size)
+
+    def forward(self, x):
+        if x.dim() == 2:
+            x = x.unsqueeze(-1)
+
+        x = self.input_projection(x)
+        x = self.positional_encoding(x)
+
+        attn_output, _ = self.attention(x, x, x) # Self-Attention across time steps
+        attn_output = self.layer_norm(attn_output + x) # Residual Connection & normalizaiton
+
+        pooled_output = attn_output.mean(dim=1) # Aggregate time step info
+        return self.fc(pooled_output) # Map to the final output embedding
+    
 # Projection head for contrastive loss
 class ProjectionHead(nn.Module):
     def __init__(self, input_dim, projection_dim, hidden_dim=256, dropout=0.1):
@@ -77,7 +113,7 @@ class SimplerHead(nn.Module):
 class ContrastiveModel(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, projection_dim):
         super(ContrastiveModel, self).__init__()
-        self.encoder = FeatureExtractor(input_size, hidden_size, output_size)
+        self.encoder = AttentionFeatureExtractor(input_size, hidden_size, output_size, num_heads=2)
         self.projection = ProjectionHead(output_size, projection_dim)
 
     def forward(self, x):
@@ -344,6 +380,7 @@ def evaluate_encoder(model, dataloader, device):
     from sklearn.manifold import TSNE
     import matplotlib.pyplot as plt
     from sklearn.preprocessing import normalize
+    import umap.umap_ as umap
 
     # Use unaugmented test data
     model.eval()
@@ -360,12 +397,19 @@ def evaluate_encoder(model, dataloader, device):
     tsne = TSNE(n_components=2, perplexity=30, random_state=42, learning_rate=200, max_iter=3000)
     embeddings = np.concatenate(embeddings)
     embeddings = normalize(embeddings, axis=1)
+
+    umap_model = umap.UMAP(n_components=2, random_state=42)
+    umap_result = umap_model.fit_transform(embeddings)
+
     embeddings_2d = tsne.fit_transform(embeddings)
+
     labels = np.concatenate(labels)
 
-    plt.figure(figsize=(10, 8))
-    plt.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], c=labels, cmap='viridis')
-    plt.colorbar()
-    plt.title("t-SNE Visualization of Embeddings")
-    plt.savefig("tsne_embeddings.png")
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+    axes[0].scatter(umap_result[:, 0], umap_result[:, 1], c=labels, cmap='coolwarm')
+    axes[0].set_title("UMAP Visualization")
+    axes[1].scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], c=labels, cmap='coolwarm')
+    axes[1].set_title("t-SNE Visualization")
+    plt.tight_layout()
+    plt.savefig("umap_tsne.png")
     plt.close()
