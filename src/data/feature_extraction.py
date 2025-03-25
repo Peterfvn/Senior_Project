@@ -3,6 +3,7 @@ import pandas as pd
 import scipy.signal as signal
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
@@ -138,6 +139,44 @@ def plotting(df):
     UMAP_analysis(X_scaled, df_labels, "R3_UMAP_features.png")
     UMAP_analysis(X_scaled_important, df_labels, "R3_UMAP_important_features.png")
 
+def plot_significant_features(df, rat):
+    """Perform a t-test on the features of a specific rat, return significant features"""
+    norm_df = df[df[df.columns[0]] == rat]
+    df_labels = norm_df[norm_df.columns[4]].reset_index(drop=True)
+    features = extract_general_features(norm_df)
+    features["label"] = df_labels
+
+    feature_columns = [col for col in features.columns if col not in ["rat", "label"]]
+    significant_features = []
+    for feature in feature_columns:
+        t_stat, p_value = stats.ttest_ind(features[feature][features["label"] == 0], features[feature][features["label"] == 1])
+        if p_value < 0.05:
+            significant_features.append(feature)
+
+    scaler = StandardScaler()
+    if len(significant_features) > 1:
+        X_scaled_important = scaler.fit_transform(features[significant_features])
+        PCA_analysis(X_scaled_important, df_labels, f"R{rat}_PCA_important_features_{significant_features}.png")
+        tSNE_analysis(X_scaled_important, df_labels, f"R{rat}_tSNE_imporant_features_{significant_features}.png")
+        UMAP_analysis(X_scaled_important, df_labels, f"R{rat}_UMAP_important_features_{significant_features}.png")
+    elif len(significant_features) == 1:
+        sns.violinplot(data=features, x="label", y=significant_features[0], inner='box', palette='Set2')
+        plt.xlabel("Label")
+        plt.ylabel(significant_features[0])
+        plt.title(f"R{rat} {significant_features[0]}")
+        plt.savefig(f"R{rat}_{significant_features[0]}_violin.png")
+        plt.close()
+
+        # Plot the feature distribution for each label
+        plt.scatter(features.index, features[significant_features[0]], c=features["label"], cmap='coolwarm', alpha=1.0)
+        plt.xlabel("Index")
+        plt.ylabel(significant_features[0])
+        plt.title(f"R{rat} {significant_features[0]}")
+        plt.savefig(f"R{rat}_{significant_features[0]}_scatter.png")
+        plt.close()
+    else:
+        print(f"No significant features for R{rat}")
+
 def main():
     """
     Train a simple logistic regression / random forest model using the feature extraction
@@ -184,39 +223,13 @@ def main():
     print("F1 Score:", f1_score(y_test, y_pred, average='weighted'))
 
 if __name__ == "__main__":
-    main()
+    # main()
 
 
-    # df = load_file('PFC_con_4.csv')
-    # df = clean_data(df)
-    # df = trial_avg(df)
+    df = load_file('PFC_con_4.csv')
+    df = clean_data(df)
+    df = trial_avg(df)
 
-    # rats = df.iloc[:, 0]
-    # df_labels = df[df.columns[4]]
-
-    # norm_df = df[df[df.columns[0]] == 1]
-    # # norm_df = normalize_by_rat(norm_df)
-    # df_labels = norm_df[norm_df.columns[4]]
-
-    # features = extract_general_features(norm_df)
-    # features["label"] = df_labels
-    # # features.insert(0, "rat", rats)
-
-    # # No longer normalizing after feature extraction
-    # # features = normalize_by_rat(features)
-
-    # scaler = StandardScaler()
-    # X_scaled = scaler.fit_transform(features.drop(columns=["label"]))
-    # X_scaled_important = scaler.fit_transform(features[['mean', 'latency_to_first_peak']])
-
-    # feature_columns = [col for col in features.columns if col not in ["rat", "label"]]
-    # significant_features = []
-    # for feature in feature_columns:
-    #     t_stat, p_value = stats.ttest_ind(features[feature][features["label"] == 0],
-    #                                        features[feature][features["label"] == 1], nan_policy='omit')
-    #     if p_value < 0.05:
-    #         significant_features.append((feature, p_value))
-
-    # print("Significant Features (p < 0.05):")
-    # for feat, p_val in significant_features:
-    #     print(f"{feat}: p-value = {p_val:.4f}")
+    rats = df[df.columns[0]].unique()
+    for rat in rats:
+        plot_significant_features(df, rat)
