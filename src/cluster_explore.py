@@ -156,14 +156,31 @@ def neuron_per_trial():
     df.index.name = 'Rat'
     df = df[sorted(df.columns)]
 
-    plt.figure(figsize=(10, 6))
-    sns.heatmap(df, cmap='coolwarm', annot=True, fmt=".2f", linewidths=.5)
+    press_rate_dict = {
+    1.0: 0.12,
+    3.0: 0.04,
+    5.0: 0.30,
+    10.0: 0.42,
+    11.0: 0.04,
+    15.0: 0.36,
+    16.0: 0.16,
+}
 
-    plt.title('Neuron Importance Profiles')
-    plt.ylabel('Rat')
-    plt.xlabel('Feature Group')
+
+    colors = df.index.map(press_rate_dict)
+
+    reducer = umap.UMAP(random_state=42)
+    reduced_data = reducer.fit_transform(df.values)
+    # Plotting
+    plt.figure(figsize=(10, 8))
+    scatter = plt.scatter(reduced_data[:, 0], reduced_data[:, 1], c=colors, cmap='viridis', alpha=0.8)
+    plt.title("UMAP Visualization of Rat Importance Profiles")
+    plt.xlabel("UMAP Component 1")
+    plt.ylabel("UMAP Component 2")
+    plt.colorbar(scatter, label="Press-Rate")
+
     plt.tight_layout()
-    plt.savefig('neuron_importance_profiles.png')
+    plt.savefig("UMAP_rat_importance_profiles.png")
     plt.close()
 
 
