@@ -46,6 +46,9 @@ def neuron_per_trial():
     df = load_file('PFC_con_4.csv')
 
     time_cols = df.columns[5:]
+    pre_cols = time_cols[:20]
+    during_cols = time_cols[20:80]
+    post_cols = time_cols[80:]
 
     # Unique trial ID
     df['Trial Key'] = list(zip(df[df.columns[0]], df[df.columns[2]]))
@@ -59,9 +62,15 @@ def neuron_per_trial():
         press = group[df.columns[4]].iloc[0]
         cue_type = group[df.columns[3]].iloc[0]
 
-        mean_vec = group[time_cols].mean(axis=1).values
-        std_vec = group[time_cols].std(axis=1).values
-        trial_vec = np.concatenate([mean_vec, std_vec])
+        pre_mean = group[pre_cols].mean(axis=1).values
+        during_mean = group[during_cols].mean(axis=1).values
+        post_mean = group[post_cols].mean(axis=1).values
+
+        pre_std = group[pre_cols].std(axis=1).values
+        during_std = group[during_cols].std(axis=1).values
+        post_std = group[post_cols].std(axis=1).values
+
+        trial_vec = np.concatenate([pre_mean, pre_std, during_mean, during_std, post_mean, post_std])
 
         rat_features[rat_id].append(trial_vec)
         rat_labels[rat_id].append(press)
@@ -78,12 +87,29 @@ def neuron_per_trial():
         y_neg = y[neg_mask]
 
         # Make feature names
-        num_units = X.shape[1] // 2
-        feature_names = [f"mean_{i}" for i in range(num_units)] + [f"std_{i}" for i in range(num_units)]
+        num_units = X.shape[1] // 6
+        feature_names = []
+        for i in range(num_units):
+            feature_names += [f"pre_mean_{i}", f"pre_std_{i}", f"during_mean_{i}", f"during_std_{i}", f"post_mean_{i}", f"post_std_{i}"]
 
         print(f"Training model for Rat {rat_id}")
 
         X_train, X_test, y_train, y_test = train_test_split(X_neg, y_neg, test_size=0.2, stratify=y_neg, random_state=42)
+
+        # Oversampling
+        from sklearn.utils import resample
+        X_press = X_train[y_train == 1]
+        X_nopress = X_train[y_train == 0]
+
+        if len(X_press) == 0 or len(X_nopress) == 0:
+            print("Skipping Rat {rat_id} due to insufficient data.")
+            continue
+    
+        X_press_unsampled, y_press_unsampled = resample(X_press, y_train[y_train==1], replace=True, n_samples=len(X_nopress), random_state=42)
+
+        X_train = np.vstack([X_nopress, X_press_unsampled])
+        y_train = np.hstack([y_train[y_train==0], y_press_unsampled])
+
         # clf = LogisticRegression(max_iter=1000)
         clf = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
         clf.fit(X_train, y_train)
