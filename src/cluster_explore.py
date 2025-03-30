@@ -38,7 +38,7 @@ def neuron_per_trial():
     [mean_n1, mean_n2, ..., mean_nn, std_n1, std_n2, ..., std_nn]
     This loses temporal data. Will be improved later.
     """
-    from sklearn.metrics import accuracy_score, confusion_matrix
+    from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
     from sklearn.linear_model import LogisticRegression
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.model_selection import train_test_split
@@ -84,16 +84,20 @@ def neuron_per_trial():
         print(f"Training model for Rat {rat_id}")
 
         X_train, X_test, y_train, y_test = train_test_split(X_neg, y_neg, test_size=0.2, stratify=y_neg, random_state=42)
-        clf = LogisticRegression(max_iter=1000)
-        clf = RandomForestClassifier(n_estimators=100, random_state=42)
+        # clf = LogisticRegression(max_iter=1000)
+        clf = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
         clf.fit(X_train, y_train)
 
         y_pred = clf.predict(X_test)
         acc = accuracy_score(y_test, y_pred)
-        cm = confusion_matrix(y_test, y_pred)
         print(f"  ✅ Accuracy: {acc:.3f}")
-        print("  Confusion matrix:")
-        print(cm)
+        print(classification_report(
+            y_test,
+            y_pred,
+            labels=[0, 1],  # Expect both classes
+            target_names=['No Press', 'Press'],
+            zero_division=0  # Avoid division errors when precision/recall is undefined
+        ))
 
         importances = clf.feature_importances_
         indices = np.argsort(importances)[::-1]
