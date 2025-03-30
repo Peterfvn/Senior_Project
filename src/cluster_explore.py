@@ -56,6 +56,8 @@ def neuron_per_trial():
     rat_features = defaultdict(list)
     rat_labels = defaultdict(list)
     rat_cue = defaultdict(list)
+    rat_models = {}
+    rat_feature_names = defaultdict(list)
 
     for trial_key, group in df.groupby([df.columns[0], 'Trial Key']):
         rat_id = group[df.columns[0]].iloc[0]
@@ -92,6 +94,8 @@ def neuron_per_trial():
         for i in range(num_units):
             feature_names += [f"pre_mean_{i}", f"pre_std_{i}", f"during_mean_{i}", f"during_std_{i}", f"post_mean_{i}", f"post_std_{i}"]
 
+        rat_feature_names[rat_id] = feature_names
+
         print(f"Training model for Rat {rat_id}")
 
         X_train, X_test, y_train, y_test = train_test_split(X_neg, y_neg, test_size=0.2, stratify=y_neg, random_state=42)
@@ -125,21 +129,43 @@ def neuron_per_trial():
             zero_division=0  # Avoid division errors when precision/recall is undefined
         ))
 
+        # Save the model
+        rat_models[rat_id] = clf
+
+    rat_importance_profiles = {}
+
+    for rat_id in rat_models:
+        clf = rat_models[rat_id]
         importances = clf.feature_importances_
-        indices = np.argsort(importances)[::-1]
+        feature_names = rat_feature_names[rat_id]
 
-        top_labels = [feature_names[i] for i in indices[:10]]
+        group_importance = defaultdict(list)
 
-        plt.figure(figsize=(6,4))
-        plt.title(f"Rat {int(rat_id)} - Top Feature Importances: {acc:.3f}")
-        plt.bar(range(10), importances[indices[:10]])
-        plt.xlabel("Feature Index")
-        plt.ylabel("Importance")
-        plt.xticks(range(10), top_labels, rotation=45)
-        plt.tight_layout()
+        for i, name in enumerate(feature_names):
+            group_key = "_".join(name.split("_")[:2])
+            group_importance[group_key].append(importances[i])
 
-        plt.savefig(f"feature_improtance_neurons_rat{int(rat_id)}.png")
-        plt.close()
+        rat_importance_profiles[rat_id] = dict(group_importance)
+
+    summed_profiles = {
+    rat_id: {key: sum(importance_list) for key, importance_list in phase_dict.items()}
+    for rat_id, phase_dict in rat_importance_profiles.items()
+}
+    
+    df = pd.DataFrame(summed_profiles).T # Make the rats rows
+    df.index.name = 'Rat'
+    df = df[sorted(df.columns)]
+
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(df, cmap='coolwarm', annot=True, fmt=".2f", linewidths=.5)
+
+    plt.title('Neuron Importance Profiles')
+    plt.ylabel('Rat')
+    plt.xlabel('Feature Group')
+    plt.tight_layout()
+    plt.savefig('neuron_importance_profiles.png')
+    plt.close()
+
 
 def plot_umap(df):
     tones = df.iloc[:, 5:105].values
