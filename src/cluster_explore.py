@@ -77,6 +77,10 @@ def neuron_per_trial():
         X_neg = X[neg_mask]
         y_neg = y[neg_mask]
 
+        # Make feature names
+        num_units = X.shape[1] // 2
+        feature_names = [f"mean_{i}" for i in range(num_units)] + [f"std_{i}" for i in range(num_units)]
+
         print(f"Training model for Rat {rat_id}")
 
         X_train, X_test, y_train, y_test = train_test_split(X_neg, y_neg, test_size=0.2, stratify=y_neg, random_state=42)
@@ -90,6 +94,22 @@ def neuron_per_trial():
         print(f"  ✅ Accuracy: {acc:.3f}")
         print("  Confusion matrix:")
         print(cm)
+
+        importances = clf.feature_importances_
+        indices = np.argsort(importances)[::-1]
+
+        top_labels = [feature_names[i] for i in indices[:10]]
+
+        plt.figure(figsize=(6,4))
+        plt.title(f"Rat {int(rat_id)} - Top Feature Importances: {acc:.3f}")
+        plt.bar(range(10), importances[indices[:10]])
+        plt.xlabel("Feature Index")
+        plt.ylabel("Importance")
+        plt.xticks(range(10), top_labels, rotation=45)
+        plt.tight_layout()
+
+        plt.savefig(f"feature_improtance_neurons_rat{int(rat_id)}.png")
+        plt.close()
 
 def plot_umap(df):
     tones = df.iloc[:, 5:105].values
