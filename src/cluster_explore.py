@@ -35,7 +35,7 @@ def prepare_data():
 def neuron_per_trial():
     """
     Create a feature vector with neuron data for each trial.
-    [mean_n1, mean_n2, ..., mean_nn, std_n1, std_n2, ..., std_nn]
+    [mean_pre_n1, std_pre_n1, ..., mean_post_nn, std_post_nn]
     This loses temporal data. Will be improved later.
     """
     from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
@@ -64,17 +64,9 @@ def neuron_per_trial():
         press = group[df.columns[4]].iloc[0]
         cue_type = group[df.columns[3]].iloc[0]
 
-        pre_mean = group[pre_cols].mean(axis=1).values
-        during_mean = group[during_cols].mean(axis=1).values
-        post_mean = group[post_cols].mean(axis=1).values
+        time_mat = group[time_cols].values.flatten()
 
-        pre_std = group[pre_cols].std(axis=1).values
-        during_std = group[during_cols].std(axis=1).values
-        post_std = group[post_cols].std(axis=1).values
-
-        trial_vec = np.concatenate([pre_mean, pre_std, during_mean, during_std, post_mean, post_std])
-
-        rat_features[rat_id].append(trial_vec)
+        rat_features[rat_id].append(time_mat)
         rat_labels[rat_id].append(press)
         rat_cue[rat_id].append(cue_type)
 
@@ -131,57 +123,6 @@ def neuron_per_trial():
 
         # Save the model
         rat_models[rat_id] = clf
-
-    rat_importance_profiles = {}
-
-    for rat_id in rat_models:
-        clf = rat_models[rat_id]
-        importances = clf.feature_importances_
-        feature_names = rat_feature_names[rat_id]
-
-        group_importance = defaultdict(list)
-
-        for i, name in enumerate(feature_names):
-            group_key = "_".join(name.split("_")[:2])
-            group_importance[group_key].append(importances[i])
-
-        rat_importance_profiles[rat_id] = dict(group_importance)
-
-    summed_profiles = {
-    rat_id: {key: sum(importance_list) for key, importance_list in phase_dict.items()}
-    for rat_id, phase_dict in rat_importance_profiles.items()
-}
-    
-    df = pd.DataFrame(summed_profiles).T # Make the rats rows
-    df.index.name = 'Rat'
-    df = df[sorted(df.columns)]
-
-    press_rate_dict = {
-    1.0: 0.12,
-    3.0: 0.04,
-    5.0: 0.30,
-    10.0: 0.42,
-    11.0: 0.04,
-    15.0: 0.36,
-    16.0: 0.16,
-}
-
-
-    colors = df.index.map(press_rate_dict)
-
-    reducer = umap.UMAP(random_state=42)
-    reduced_data = reducer.fit_transform(df.values)
-    # Plotting
-    plt.figure(figsize=(10, 8))
-    scatter = plt.scatter(reduced_data[:, 0], reduced_data[:, 1], c=colors, cmap='viridis', alpha=0.8)
-    plt.title("UMAP Visualization of Rat Importance Profiles")
-    plt.xlabel("UMAP Component 1")
-    plt.ylabel("UMAP Component 2")
-    plt.colorbar(scatter, label="Press-Rate")
-
-    plt.tight_layout()
-    plt.savefig("UMAP_rat_importance_profiles.png")
-    plt.close()
 
 
 def plot_umap(df):
