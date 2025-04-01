@@ -107,7 +107,6 @@ def simple_classifier(data, labels):
     print("Accuracy (Press prediction):", np.mean(scores))
 
     
-
 def main():
     data = load_file("PFC_con_4.csv")
     data = clean_data(data)
@@ -118,9 +117,10 @@ def main():
     fft_vals = []
     for rat in rats:
         rat_df = data[data[data.columns[0]] == rat]
-        labels = rat_df[rat_df.columns[4]].reset_index(drop=True)
+        rat_df_negs = rat_df[rat_df[rat_df.columns[3]] == 0]
+        labels = rat_df_negs[rat_df_negs.columns[4]].reset_index(drop=True)
 
-        features = sliding_window_fft(rat_df)
+        features = sliding_window_fft(rat_df_negs)
         print(f"Rat: {rat}")
         simple_classifier(features, labels)
 
