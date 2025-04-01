@@ -38,6 +38,35 @@ def fft_features(data):
 
     return np.array(fft_energies)
 
+
+def sliding_window_fft(df, window_size=20, stride=2):
+    """Use a sliding window instead of disjoint windows"""
+    all_features = []
+
+    for index, trial in df.iterrows():
+        trial_data = trial.iloc[5:].values
+        num_bins = len(trial_data)
+
+        features = []
+        first_window_energy = None
+
+        for start in range(0, num_bins - window_size + 1, stride):
+            window = trial_data[start:start + window_size]
+
+            fft_vals = fft(window)
+            fft_half = fft_vals[:window_size // 2]
+            energy = np.sum(np.abs(fft_half)**2)
+
+            if first_window_energy is None:
+                first_window_energy = energy
+            normalized_energy = energy - first_window_energy
+
+            features.append(normalized_energy)
+
+        all_features.append(features)
+    
+    return np.array(all_features)
+
 def plot_fft(data, labels, rat):
     """
     Plot FFT features for the given rat.
@@ -58,9 +87,9 @@ def plot_fft(data, labels, rat):
         plt.savefig(title)
         plt.close()
     
-    plot_embedding(umap_result, f"R{rat}_UMAP_FFT_Energy_Normalization.png")
-    plot_embedding(tsne_result, f"R{rat}_TSNE_FFT_Energy_Normalization.png")
-    plot_embedding(pca_result, f"R{rat}_PCA_FFT_Energy_Normalization.png")
+    plot_embedding(umap_result, f"R{rat}_UMAP_SlidingFFT_Energy_Normalization.png")
+    plot_embedding(tsne_result, f"R{rat}_TSNE_FFT_SlidingEnergy_Normalization.png")
+    plot_embedding(pca_result, f"R{rat}_PCA_FFT_SlidingEnergy_Normalization.png")
 
 def simple_classifier(data, labels):
     """
@@ -68,8 +97,12 @@ def simple_classifier(data, labels):
     """
     from sklearn.linear_model import LogisticRegression
     from sklearn.model_selection import cross_val_score
+    from sklearn.preprocessing import StandardScaler
 
-    clf = LogisticRegression(max_iter=1000)
+    scaler = StandardScaler()
+    data = scaler.fit_transform(data)
+
+    clf = LogisticRegression(max_iter=5000)
     scores = cross_val_score(clf, data, labels, cv=5)
     print("Accuracy (Press prediction):", np.mean(scores))
 
@@ -87,8 +120,9 @@ def main():
         rat_df = data[data[data.columns[0]] == rat]
         labels = rat_df[rat_df.columns[4]].reset_index(drop=True)
 
-        features = fft_features(rat_df)
-        plot_fft(features, labels, rat)
+        features = sliding_window_fft(rat_df)
+        print(f"Rat: {rat}")
+        simple_classifier(features, labels)
 
     exit()
 
