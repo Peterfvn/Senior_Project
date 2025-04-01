@@ -13,7 +13,7 @@ import numpy as np
 def parse_args():
     parser = argparse.ArgumentParser(description='Neural Network Training Parameters')
     parser.add_argument('--epochs', type=int, default=10,
-                      help='number of epochs to train (default: 100)')
+                      help='number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=0.001,
                       help='learning rate (default: 0.001)')
     parser.add_argument('--batch_size', type=int, default=32,
@@ -72,7 +72,7 @@ def main(flag=False):
 if __name__ == "__main__":
     visualize_flag = False
     if not visualize_flag:
-        main(True)
+        main(False)
 
     # True is training model
     if visualize_flag:
