@@ -6,6 +6,10 @@ from sklearn.cluster import KMeans
 import umap.umap_ as umap
 import seaborn as sns
 from collections import defaultdict
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 
 def prepare_data():
     df = load_file('PFC_con_4.csv')
@@ -38,11 +42,6 @@ def neuron_per_trial():
     [mean_pre_n1, std_pre_n1, ..., mean_post_nn, std_post_nn]
     This loses temporal data. Will be improved later.
     """
-    from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.ensemble import RandomForestClassifier
-    from sklearn.model_selection import train_test_split
-
     df = load_file('PFC_con_4.csv')
 
     time_cols = df.columns[5:]
@@ -63,10 +62,18 @@ def neuron_per_trial():
         rat_id = group[df.columns[0]].iloc[0]
         press = group[df.columns[4]].iloc[0]
         cue_type = group[df.columns[3]].iloc[0]
+ 
+        pre_mean = group[pre_cols].mean(axis=1).values 
+        during_mean = group[during_cols].mean(axis=1).values 
+        post_mean = group[post_cols].mean(axis=1).values
+ 
+        pre_std = group[pre_cols].std(axis=1).values 
+        during_std = group[during_cols].std(axis=1).values 
+        post_std = group[post_cols].std(axis=1).values
+ 
+        trial_vec = np.concatenate([pre_mean, pre_std, during_mean, during_std, post_mean, post_std])
 
-        time_mat = group[time_cols].values.flatten()
-
-        rat_features[rat_id].append(time_mat)
+        rat_features[rat_id].append(trial_vec)
         rat_labels[rat_id].append(press)
         rat_cue[rat_id].append(cue_type)
 
@@ -112,17 +119,113 @@ def neuron_per_trial():
 
         y_pred = clf.predict(X_test)
         acc = accuracy_score(y_test, y_pred)
-        print(f"  ✅ Accuracy: {acc:.3f}")
-        print(classification_report(
-            y_test,
-            y_pred,
-            labels=[0, 1],  # Expect both classes
-            target_names=['No Press', 'Press'],
-            zero_division=0  # Avoid division errors when precision/recall is undefined
-        ))
+        # print(f"  ✅ Accuracy: {acc:.3f}")
+        # print(classification_report(
+        #     y_test,
+        #     y_pred,
+        #     labels=[0, 1],  # Expect both classes
+        #     target_names=['No Press', 'Press'],
+        #     zero_division=0  # Avoid division errors when precision/recall is undefined
+        # ))
 
         # Save the model
         rat_models[rat_id] = clf
+
+    """Cross model training"""
+    X = np.stack(rat_features[10.0])
+    y = np.array(rat_labels[10.0])
+    cues = np.array(rat_cue[10.0])
+
+    X_test = np.stack(rat_features[15.0])
+    y_test = np.array(rat_labels[15.0])
+
+    # Filter negatives
+    neg_mask = cues == 0
+    X_neg = X[neg_mask]
+    y_neg = y[neg_mask]
+
+    X_test_neg = X_test[neg_mask]
+    y_test_neg = y_test[neg_mask]
+
+    # X_press = X_neg[y_neg == 1]
+    # X_nopress = X_neg[y_neg == 0]
+
+    # X_press_unsampled, y_press_unsampled = resample(X_press, y_neg[y_neg==1], replace=True, n_samples=len(X_nopress), random_state=42)
+
+    # X_train = np.vstack([X_nopress, X_press_unsampled])
+    # y_train = np.hstack([y_train[y_train==0], y_press_unsampled])
+
+    # print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+    # exit()
+
+    clf = LogisticRegression(max_iter=1000)
+
+    print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+    exit()
+    clf.fit(X_neg, y_neg)
+
+    y_pred = clf.predict(X_test_neg)
+    acc = accuracy_score(y_test_neg, y_pred)
+
+    print(f"\n📊 Cross-Rat Transfer: Train on Rat {10}, Test on Rat {15}")
+    print(classification_report(y_test, y_pred, target_names=["No Press", "Press"]))
+
+def cross_model_training():
+    """Train a model on one rat's data and test on another rat's data"""
+    df = load_file("PFC_con_4.csv")
+    df = clean_data(df)
+    df = trial_avg(df)
+    rats = df[df.columns[0]].unique()
+
+    # Using trial data instead of individual neuron data
+
+    time_cols = df.columns[5:105]
+    pre_tone = time_cols[:20]
+    during_tone = time_cols[20:80]
+    post_tone = time_cols[80:]
+
+    rat_features = defaultdict(list)
+    rat_labels = defaultdict(list)
+    rat_cue = defaultdict(list)
+    
+    for rat in rats:
+        rat_df = df[df[df.columns[0]] == rat]
+        all_features = []
+        for index, row in rat_df.iterrows():
+            pre_mean = row.iloc[pre_tone].mean()
+            during_mean = row.iloc[during_tone].mean()
+            post_mean = row.iloc[post_tone].mean()
+
+            pre_std = row.iloc[pre_tone].std()
+            during_std = row.iloc[during_tone].std()
+            post_std = row.iloc[post_tone].std()
+
+            trial_vec = np.array([pre_mean, pre_std, during_mean, during_std, post_mean, post_std])
+            all_features.append(trial_vec)
+
+            press_label = row[df.columns[4]]
+            cue_label = row[df.columns[3]]
+
+            rat_labels[rat].append(press_label)
+            rat_cue[rat].append(cue_label)
+        rat_features[rat] = all_features
+
+    # Train a model on one rat's data and test on another rat's data
+    cls = LogisticRegression(max_iter=1000)
+    X = np.stack(rat_features[15.0])
+    y = np.array(rat_labels[15.0])
+    
+    X_test = np.stack(rat_features[3.0])
+    y_test = np.array(rat_labels[3.0])
+
+    cls.fit(X, y)
+    y_pred = cls.predict(X_test)
+    print(f"\n📊 Cross-Rat Transfer: Train on Rat {15}, Test on Rat {10}")
+    print(f"\nAccuracy: {accuracy_score(y_test, y_pred)}")
+    print(classification_report(y_test, y_pred, target_names=["No Press", "Press"]))
+    
+
+    
 
 
 def plot_umap(df):
@@ -139,15 +242,15 @@ def plot_umap(df):
     unique_labels = np.unique(labels)
     for label in unique_labels:
         plt.scatter([], [], color=scatter.cmap(scatter.norm(label)), label=label)
-    plt.legend(title="Labels")
-    plt.title('UMAP Visualization of Rat Data')
-    plt.xlabel('UMAP Component 1')
-    plt.ylabel('UMAP Component 2')
-    plt.savefig('umap_visualization_pretone_tone.png')
+        plt.legend(title="Labels")
+        plt.title('UMAP Visualization of Rat Data')
+        plt.xlabel('UMAP Component 1')
+        plt.ylabel('UMAP Component 2')
+        plt.savefig('umap_visualization_pretone_tone.png')
 
 
 def main():
-    neuron_per_trial()
+    cross_model_training()
 
 
 
