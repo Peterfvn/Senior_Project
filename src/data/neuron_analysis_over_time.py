@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from collections import defaultdict
 
 def preparedata():
     """
@@ -31,7 +32,7 @@ def heatmap_single_neuron(df):
     plt.savefig(f"heatmap_neuron_{df.columns[1]}.png")
     plt.close()
 
-def line_plot_single_neuron(df):
+def line_plot_single_neuron(df, neuron_id):
     """
     Plot a line plot of a single neuron's activity over time.
     """
@@ -56,9 +57,9 @@ def line_plot_single_neuron(df):
     # Add labels and title
     plt.xlabel("Time")
     plt.ylabel("Activity")
-    plt.title(f"Neuron {df.columns[1]}")
+    plt.title(f"Neuron {neuron_id}")
     plt.legend()
-    plt.savefig(f"lineplot_neuron_{df.columns[1]}.png")
+    plt.savefig(f"lineplot_neuron_{neuron_id}.png")
     plt.close()  # Close the figure to free memory
 
     
@@ -70,17 +71,21 @@ def main():
 
     # Just use rat 1 for now
     df_rat = df[df[df.columns[0]] == 1.0]
+
+    # Count amount of neurons, create dict for channels
+    channel_counts = defaultdict(int)
+    num_neurons = len(df_rat) // 100
     
-    # Filter down to just one neuron
-    neuron_num = 1.0
-    df_neuron = df_rat[df_rat[df_rat.columns[1]] == neuron_num]
+    for i in range(num_neurons):
+        channel = df_rat.iloc[i*100, 1]
+        count = channel_counts[channel]
+        suffix = chr(ord('a') + count)  # Create a suffix like 'a', 'b', 'c', ...
+        neuron_id = f"{channel}{suffix}"
 
-    # Sort the neuron by trial type to divide the heatmap
-    df_neuron = df_neuron.sort_values(by=[df_neuron.columns[3]])
-    
-    # Plot the lineplot
-    line_plot_single_neuron(df_neuron)
+        channel_counts[channel] += 1
 
-
+        # Create lineplot for each neuron
+        df_neuron = df_rat.iloc[i*100:(i+1)*100, :]
+        line_plot_single_neuron(df_neuron, neuron_id=neuron_id)
 
 main()
