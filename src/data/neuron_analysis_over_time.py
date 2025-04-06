@@ -29,6 +29,40 @@ def heatmap_single_neuron(df):
     plt.ylabel("Trials")
     plt.title(f"Neuron {df.columns[1]}")
     plt.savefig(f"heatmap_neuron_{df.columns[1]}.png")
+    plt.close()
+
+def line_plot_single_neuron(df):
+    """
+    Plot a line plot of a single neuron's activity over time.
+    """
+    # Define two colors for the two trial types
+    colors = ['blue', 'red']
+    
+    # Divide the data by cue type
+    cues = df[df.columns[3]].unique()
+    time = np.arange(0, 100)
+
+    for i, cue in enumerate(cues):
+        # Filter the data for the current cue
+        df_cue = df[df[df.columns[3]] == cue]
+
+        # Plot the line plot
+        mean = df_cue.iloc[:, 5:].mean(axis=0)
+        std = df_cue.iloc[:, 5:].std(axis=0)
+
+        plt.plot(time, mean, color=colors[i], label=f'{cue} trials')
+        plt.fill_between(time, mean - std, mean + std, color=colors[i], alpha=0.2)
+
+    # Add labels and title
+    plt.xlabel("Time")
+    plt.ylabel("Activity")
+    plt.title(f"Neuron {df.columns[1]}")
+    plt.legend()
+    plt.savefig(f"lineplot_neuron_{df.columns[1]}.png")
+    plt.close()  # Close the figure to free memory
+
+    
+
 
 def main():
     df = preparedata()
@@ -44,8 +78,8 @@ def main():
     # Sort the neuron by trial type to divide the heatmap
     df_neuron = df_neuron.sort_values(by=[df_neuron.columns[3]])
     
-    # Plot the heatmap
-    heatmap_single_neuron(df_neuron)
+    # Plot the lineplot
+    line_plot_single_neuron(df_neuron)
 
 
 
