@@ -40,19 +40,24 @@ def line_plot_single_neuron(df, neuron_id):
     # Define two colors for the two trial types
     colors = ['blue', 'red']
     
-    # Divide the data by cue type
-    cues = df[df.columns[3]].unique()
+    # Divide the data by press type
+    press = df[df.columns[4]].unique()
     time = np.arange(0, 100)
 
-    for i, cue in enumerate(cues):
-        # Filter the data for the current cue
-        df_cue = df[df[df.columns[3]] == cue]
+    for i, press in enumerate(press):
+        # Filter the data for the current press
+        df_press = df[df[df.columns[4]] == press]
 
         # Plot the line plot
-        mean = df_cue.iloc[:, 5:].mean(axis=0)
-        std = df_cue.iloc[:, 5:].std(axis=0)
+        mean = df_press.iloc[:, 5:].mean(axis=0)
+        std = df_press.iloc[:, 5:].std(axis=0)
 
-        plt.plot(time, mean, color=colors[i], label=f'{cue} trials')
+        if press == 1.0:
+            press_label = 'Press'
+        else:
+            press_label = 'No Press'
+
+        plt.plot(time, mean, color=colors[i], label=f'{press_label} trials')
         plt.fill_between(time, mean - std, mean + std, color=colors[i], alpha=0.2)
 
     # Add labels and title
@@ -123,9 +128,12 @@ def main():
 
         # Create lineplot for each neuron
         df_neuron = df_rat.iloc[i*100:(i+1)*100, :]
-        t_list = t_test_list(df_neuron)
-        t_matrix[i, :] = t_list
+
+        # Filter out all positive cue trials
+        df_neuron = df_neuron[df_neuron[df_neuron.columns[3]] == 0.0]
+        line_plot_single_neuron(df_neuron, neuron_id)
     
+    exit()
     max_t = np.max(np.abs(t_matrix), axis=1)
     mean_t = np.mean(np.abs(t_matrix), axis=1)
 
