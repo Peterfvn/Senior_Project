@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from collections import defaultdict
+from scipy.stats import ttest_ind
 
 def preparedata():
     """
@@ -60,10 +61,40 @@ def line_plot_single_neuron(df, neuron_id):
     plt.title(f"Neuron {neuron_id}")
     plt.legend()
     plt.savefig(f"lineplot_neuron_{neuron_id}.png")
-    plt.close()  # Close the figure to free memory
+    plt.close()
+
+def t_test_list(df):
+    """
+    Perform a t-test on the activity of the neuron across trials. Do this for each neuron to construct
+    a matrix of results to determine which neurons are significant at what times.
+    """
+
+    t_stats = []
+
+    for i in range(100):
+        # Split by cue type
+        positive_trials = df[df[df.columns[3]] == 1.0]
+        negative_trials = df[df[df.columns[4]] == 0.0]
+
+        # Perform t-test
+        try:
+            t, p = ttest_ind(positive_trials.iloc[:, 5+i], negative_trials.iloc[:, 5+i], equal_var=False)
+        except:
+            print(f"Error on bin {i}")
+            t = 0.0
+        
+        t_stats.append(t)
+    
+    return np.array(t_stats)
 
     
-
+def t_test_heatmap(df):
+    sns.heatmap(np.abs(df), cmap='coolwarm', cbar=True)
+    plt.xlabel("Time Bins")
+    plt.ylabel("Neurons")
+    plt.title("Discriminability Heatmap (|t-stat|)")
+    plt.savefig("t_test_heatmap.png")
+    plt.close()
 
 def main():
     df = preparedata()
@@ -74,8 +105,13 @@ def main():
 
     # Count amount of neurons, create dict for channels
     channel_counts = defaultdict(int)
+    neuron_map = defaultdict(list)
+    
     num_neurons = len(df_rat) // 100
     
+    # Create matrix for t-test
+    t_matrix = np.zeros((num_neurons, 100))
+
     for i in range(num_neurons):
         channel = df_rat.iloc[i*100, 1]
         count = channel_counts[channel]
@@ -83,9 +119,18 @@ def main():
         neuron_id = f"{channel}{suffix}"
 
         channel_counts[channel] += 1
+        neuron_map[i] = neuron_id
 
         # Create lineplot for each neuron
         df_neuron = df_rat.iloc[i*100:(i+1)*100, :]
-        line_plot_single_neuron(df_neuron, neuron_id=neuron_id)
+        t_list = t_test_list(df_neuron)
+        t_matrix[i, :] = t_list
+    
+    max_t = np.max(np.abs(t_matrix), axis=1)
+    mean_t = np.mean(np.abs(t_matrix), axis=1)
+
+    top_neurons = np.argsort(-max_t)[:]
+    print(f"Top Neurons: {top_neurons}")
+    print(f"Neuron Map: {neuron_map}")
 
 main()
