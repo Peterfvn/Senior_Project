@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from collections import defaultdict
 from scipy.stats import ttest_ind
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 def preparedata():
     """
@@ -105,6 +108,14 @@ def t_test_heatmap(df):
     plt.savefig("t_test_heatmap.png")
     plt.close()
 
+def test_ml(df):
+    """
+    Test the machine learning model on the data. This is baseline testing
+    """
+    lg = LogisticRegression(max_iter=1000)
+    scores = cross_val_score(lg, df.iloc[:, 5:], df.iloc[:, 4], cv=5)
+    print("Accuracy (Press prediction):", np.mean(scores))
+
 def main():
     rat_id = 1.0
     plot = False
@@ -150,6 +161,9 @@ def main():
 
     for t in range(100):
         print(f"Time {t}: Neuron {neuron_map[best_neuron_at_time[t]]} with |t| {max_t_each_time[t]:.2f}")
+    
+    df_rat = df_rat[df_rat[df_rat.columns[3]] == 0.0]
+    test_ml(df_rat)
 
     # top_neurons = np.argsort(-max_t_each_time)[:]
     # print(f"Top Neurons: {top_neurons}")
