@@ -41,21 +41,21 @@ def line_plot_single_neuron(df, neuron_id):
     colors = ['blue', 'red']
     
     # Divide the data by press type
-    press = df[df.columns[4]].unique()
+    press = df[df.columns[3]].unique()
     time = np.arange(0, 100)
 
     for i, press in enumerate(press):
         # Filter the data for the current press
-        df_press = df[df[df.columns[4]] == press]
+        df_press = df[df[df.columns[3]] == press]
 
         # Plot the line plot
         mean = df_press.iloc[:, 5:].mean(axis=0)
         std = df_press.iloc[:, 5:].std(axis=0)
 
         if press == 1.0:
-            press_label = 'Press'
+            press_label = 'Positive Tone'
         else:
-            press_label = 'No Press'
+            press_label = 'Negative Tone'
 
         plt.plot(time, mean, color=colors[i], label=f'{press_label} trials')
         plt.fill_between(time, mean - std, mean + std, color=colors[i], alpha=0.2)
@@ -68,18 +68,22 @@ def line_plot_single_neuron(df, neuron_id):
     plt.savefig(f"lineplot_neuron_{neuron_id}.png")
     plt.close()
 
-def t_test_list(df):
+def t_test_list(df, press_test):
     """
     Perform a t-test on the activity of the neuron across trials. Do this for each neuron to construct
     a matrix of results to determine which neurons are significant at what times.
     """
 
     t_stats = []
+    if press_test:
+        split_col = df.columns[4]
+    else:
+        split_col = df.columns[3]
 
     for i in range(100):
         # Split by cue type
-        positive_trials = df[df[df.columns[3]] == 1.0]
-        negative_trials = df[df[df.columns[4]] == 0.0]
+        positive_trials = df[df[split_col] == 1.0]
+        negative_trials = df[df[split_col] == 0.0]
 
         # Perform t-test
         try:
@@ -102,11 +106,15 @@ def t_test_heatmap(df):
     plt.close()
 
 def main():
+    rat_id = 1.0
+    plot = False
+    press_test = True
+
     df = preparedata()
     rats = df[df.columns[0]].unique()
-
+    
     # Just use rat 1 for now
-    df_rat = df[df[df.columns[0]] == 1.0]
+    df_rat = df[df[df.columns[0]] == rat_id]
 
     # Count amount of neurons, create dict for channels
     channel_counts = defaultdict(int)
@@ -130,15 +138,20 @@ def main():
         df_neuron = df_rat.iloc[i*100:(i+1)*100, :]
 
         # Filter out all positive cue trials
-        df_neuron = df_neuron[df_neuron[df_neuron.columns[3]] == 0.0]
-        line_plot_single_neuron(df_neuron, neuron_id)
+        if plot:
+            line_plot_single_neuron(df_neuron, neuron_id)
+        
+        if press_test:
+            df_neuron = df_neuron[df_neuron[df_neuron.columns[3]] == 0.0]
+        t_matrix[i, :] = t_test_list(df_neuron, press_test)
     
-    exit()
-    max_t = np.max(np.abs(t_matrix), axis=1)
-    mean_t = np.mean(np.abs(t_matrix), axis=1)
+    max_t_each_time = np.max(np.abs(t_matrix), axis=0)
+    best_neuron_at_time = np.argmax(np.abs(t_matrix), axis=0)
 
-    top_neurons = np.argsort(-max_t)[:]
-    print(f"Top Neurons: {top_neurons}")
-    print(f"Neuron Map: {neuron_map}")
+    for t in range(100):
+        print(f"Time {t}: Neuron {neuron_map[best_neuron_at_time[t]]} with |t| {max_t_each_time[t]:.2f}")
 
+    # top_neurons = np.argsort(-max_t_each_time)[:]
+    # print(f"Top Neurons: {top_neurons}")
+    # print(f"Neuron Map: {neuron_map}")
 main()
