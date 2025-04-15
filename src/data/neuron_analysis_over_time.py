@@ -108,6 +108,36 @@ def t_test_heatmap(df):
     plt.savefig("t_test_heatmap.png")
     plt.close()
 
+def build_best_neuron_per_time_feature_matrix(df_rat, t_matrix, num_neurons=22):
+    best_neuron_at_time = np.argmax(np.abs(t_matrix), axis=0)  # shape (100,)
+    
+    feature_matrix = []
+    labels = []
+    n_trials = 50
+
+    for trial_idx in range(n_trials):
+        feature_row = []
+        label = df_rat.iloc[n_trials + trial_idx, 4]
+        labels.append(label)
+
+        for t in range(100):
+            neuron_idx = best_neuron_at_time[t]
+
+            # Compute global column index for this neuron's bin t
+            col_idx = 5 + t
+            row_idx = neuron_idx * n_trials + trial_idx
+
+            # Extract value for this trial
+            value = df_rat.iloc[row_idx, col_idx]
+            feature_row.append(value)
+
+        feature_matrix.append(feature_row)
+
+    feature_matrix = np.array(feature_matrix)  # shape: (50 trials, 100 time-based features)
+
+    return feature_matrix, labels
+
+
 def test_ml(df):
     """
     Test the machine learning model on the data. This is baseline testing
@@ -116,8 +146,13 @@ def test_ml(df):
     scores = cross_val_score(lg, df.iloc[:, 5:], df.iloc[:, 4], cv=5)
     print("Accuracy (Press prediction):", np.mean(scores))
 
+def discriminability_lg(data, labels):
+    clf = LogisticRegression(max_iter=1000)
+    scores = cross_val_score(clf, data, labels, cv=5)
+    print("Discriminability (Press prediction):", np.mean(scores))
+
 def main():
-    rat_id = 1.0
+    rat_id = 10.0
     plot = False
     press_test = True
 
@@ -159,13 +194,29 @@ def main():
     max_t_each_time = np.max(np.abs(t_matrix), axis=0)
     best_neuron_at_time = np.argmax(np.abs(t_matrix), axis=0)
 
-    for t in range(100):
-        print(f"Time {t}: Neuron {neuron_map[best_neuron_at_time[t]]} with |t| {max_t_each_time[t]:.2f}")
+    df_rat = df_rat[df_rat[df_rat.columns[3]] == 0.0].reset_index(drop=True) 
     
-    df_rat = df_rat[df_rat[df_rat.columns[3]] == 0.0]
-    test_ml(df_rat)
+    feature_vector, labels = build_best_neuron_per_time_feature_matrix(df_rat, t_matrix, num_neurons=22)
+    discriminability_lg(feature_vector, labels)
 
-    # top_neurons = np.argsort(-max_t_each_time)[:]
-    # print(f"Top Neurons: {top_neurons}")
-    # print(f"Neuron Map: {neuron_map}")
-main()
+def run_all_ml():
+    df = load_file('PFC_con_4.csv')
+    rats = df[df.columns[0]].unique()
+
+    for rat_id in rats:
+        rat_df = df[df[df.columns[0]] == rat_id].reset_index(drop=True)
+
+        # Filter down to only negative tones
+        rat_df = rat_df[rat_df[rat_df.columns[3]] == 0.0].reset_index(drop=True)
+
+        num_neurons = len(rat_df) // 100
+
+        t_matrix = np.zeros((num_neurons, 100))
+        for i in range(num_neurons):
+            t_matrix[i, :] = t_test_list(rat_df.iloc[i*50:(i+1)*50, :], press_test=True)
+        
+        feature_vector, labels = build_best_neuron_per_time_feature_matrix(rat_df, t_matrix, num_neurons=num_neurons)
+        print(f"Rat {rat_id} - Discriminability:")
+        discriminability_lg(feature_vector, labels)
+
+run_all_ml()
