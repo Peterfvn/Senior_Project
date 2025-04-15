@@ -3,3 +3,7 @@ __pycache__/
 .env
 Visualizations/
 notebooks/
+Design_Specification.docx
+.gitignore
+Design_Specification.pdf
+Data Exploration.ipynb
