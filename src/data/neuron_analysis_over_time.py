@@ -220,3 +220,24 @@ def run_all_ml():
         discriminability_lg(feature_vector, labels)
 
 run_all_ml()
+
+"""
+Rat 1.0 - Discriminability:
+Discriminability (Press prediction): 1.0
+Rat 3.0 - Discriminability:
+C:\Users\pfvan\AppData\Local\Programs\Python\Python311\Lib\site-packages\sklearn\model_selection\_split.py:805: UserWarning: The least populated class in y has only 2 members, which is less than n_splits=5.
+  warnings.warn(
+Discriminability (Press prediction): 1.0
+Rat 5.0 - Discriminability:
+Discriminability (Press prediction): 0.96
+Rat 10.0 - Discriminability:
+Discriminability (Press prediction): 0.9400000000000001
+Rat 11.0 - Discriminability:
+C:\Users\pfvan\AppData\Local\Programs\Python\Python311\Lib\site-packages\sklearn\model_selection\_split.py:805: UserWarning: The least populated class in y has only 2 members, which is less than n_splits=5.
+  warnings.warn(
+Discriminability (Press prediction): 0.96
+Rat 15.0 - Discriminability:
+Discriminability (Press prediction): 0.9400000000000001
+Rat 16.0 - Discriminability:
+Discriminability (Press prediction): 0.9800000000000001
+"""
