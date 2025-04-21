@@ -274,14 +274,50 @@ def run_all_ml():
         # Filter down to only negative tones
         rat_df = rat_df[rat_df[rat_df.columns[3]] == 0.0].reset_index(drop=True)
 
-        num_neurons = len(rat_df) // 100
+        num_neurons = len(rat_df) // 50
 
         print(f"Rat {rat_id} - Discriminability:")
 
         cross_validated_tstat_model(rat_df, num_neurons, k=5)
 
-run_all_ml()
+def create_t_histograms():
+    df = load_file('PFC_con_4.csv')
+    rats = df[df.columns[0]].unique()
 
+    for rat_id in rats:
+        rat_df = df[df[df.columns[0]] == rat_id].reset_index(drop=True)
+        rat_df = rat_df[rat_df[rat_df.columns[3]] == 0.0].reset_index(drop=True)
+
+        num_neurons = len(rat_df) // 50
+        t_matrix = np.zeros((num_neurons, 100))
+        best_windows = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}  # Initialize counts for each window
+
+        for i in range(num_neurons):
+            df_neuron = rat_df.iloc[i*50:(i+1)*50, :]
+            t_matrix[i, :] = t_test_list(df_neuron, press_test=True)
+
+            # Compute the sum of t-values in the window
+            window_sums = []
+            for j in range(5):
+                window_sum = np.sum(t_matrix[i, j*20:(j+1)*20])
+                window_sums.append(window_sum)
+            
+            # Index of highest window sum
+            highest_window_idx = np.argmax(window_sums)
+            best_windows[highest_window_idx] += 1
+
+        # Create histogram of best windows
+        window_names = ["0 - 20", "20 - 40", "40 - 60", "60 - 80", "80 - 100"]
+        plt.figure(figsize=(8, 6))
+        plt.bar(window_names, best_windows.values())
+        plt.xlabel('Window')
+        plt.ylabel('Frequency')
+        plt.title(f'Rat {rat_id} - Best Windows')
+        plt.savefig(f'rat_{rat_id}_best_windows.png')
+        plt.close()
+
+
+create_t_histograms()
 """
 Rat 1.0 - Discriminability:
 Discriminability (Press prediction): 1.0
@@ -320,17 +356,17 @@ F1 Score: 0.941 ± 0.072
 
 Rat 5.0 - Discriminability:
 ==== Overall Performance ====
-Accuracy: 0.680 ± 0.172
-Precision: 0.690 ± 0.285
-Recall: 0.680 ± 0.172
-F1 Score: 0.641 ± 0.219
+Accuracy: 0.700 ± 0.219
+Precision: 0.650 ± 0.276
+Recall: 0.700 ± 0.219
+F1 Score: 0.649 ± 0.242
 
 Rat 10.0 - Discriminability:
 ==== Overall Performance ====
-Accuracy: 0.520 ± 0.075
-Precision: 0.636 ± 0.100
-Recall: 0.520 ± 0.075
-F1 Score: 0.505 ± 0.105
+Accuracy: 0.500 ± 0.126
+Precision: 0.497 ± 0.231
+Recall: 0.500 ± 0.126
+F1 Score: 0.479 ± 0.190
 
 Rat 11.0 - Discriminability:
 ==== Overall Performance ====
@@ -341,15 +377,15 @@ F1 Score: 0.941 ± 0.072
 
 Rat 15.0 - Discriminability:
 ==== Overall Performance ====
-Accuracy: 0.460 ± 0.102
-Precision: 0.440 ± 0.171
-Recall: 0.460 ± 0.102
-F1 Score: 0.433 ± 0.115
+Accuracy: 0.520 ± 0.133
+Precision: 0.477 ± 0.155
+Recall: 0.520 ± 0.133
+F1 Score: 0.485 ± 0.148
 
 Rat 16.0 - Discriminability:
 ==== Overall Performance ====
-Accuracy: 0.780 ± 0.117
-Precision: 0.708 ± 0.179
-Recall: 0.780 ± 0.117
-F1 Score: 0.738 ± 0.143
+Accuracy: 0.840 ± 0.102
+Precision: 0.716 ± 0.174
+Recall: 0.840 ± 0.102
+F1 Score: 0.770 ± 0.144
 """
