@@ -5,3 +5,7 @@ dotenv
 scikit-learn
 tslearn
 matplotlib
+h5py
+seaborn
+umap-learn
+shap
