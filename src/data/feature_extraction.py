@@ -187,7 +187,7 @@ def main():
     import torch.optim as optim
     from sklearn.model_selection import train_test_split
 
-    df = load_file('PFC_con_4.csv')
+    df = load_file('VTA_con_4.csv')
     df = clean_data(df)
     df = trial_avg(df)
 
@@ -223,13 +223,13 @@ def main():
     print("F1 Score:", f1_score(y_test, y_pred, average='weighted'))
 
 if __name__ == "__main__":
-    # main()
+    main()
 
 
-    df = load_file('PFC_con_4.csv')
-    df = clean_data(df)
-    df = trial_avg(df)
+    # df = load_file('VTA_con_4.csv')
+    # df = clean_data(df)
+    # df = trial_avg(df)
 
-    rats = df[df.columns[0]].unique()
-    for rat in rats:
-        plot_significant_features(df, rat)
+    # rats = df[df.columns[0]].unique()
+    # for rat in rats:
+    #     plot_significant_features(df, rat)

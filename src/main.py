@@ -25,7 +25,7 @@ def parse_args():
 def main(flag=False):
     """Focus on feature extraction from clustering"""
     args = parse_args()
-    df = load_file('PFC_con_4.csv')
+    df = load_file('VTA_con_4.csv')
     df = clean_data(df)
     df = trial_avg(df)
 
@@ -70,9 +70,9 @@ def main(flag=False):
     return accuracy, precision, recall, f1
 
 if __name__ == "__main__":
-    visualize_flag = False
+    visualize_flag = True
     if not visualize_flag:
-        main(False)
+        main(True)
 
     # True is training model
     if visualize_flag:

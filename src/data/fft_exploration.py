@@ -108,7 +108,7 @@ def simple_classifier(data, labels):
 
     
 def main():
-    data = load_file("PFC_con_4.csv")
+    data = load_file("VTA_con_4.csv")
     data = clean_data(data)
     data = trial_avg(data)
 
@@ -118,13 +118,12 @@ def main():
     for rat in rats:
         rat_df = data[data[data.columns[0]] == rat]
         rat_df_negs = rat_df[rat_df[rat_df.columns[3]] == 0]
+        # rat_df_negs = rat_df
         labels = rat_df_negs[rat_df_negs.columns[4]].reset_index(drop=True)
 
         features = sliding_window_fft(rat_df_negs)
         print(f"Rat: {rat}")
         simple_classifier(features, labels)
-
-    exit()
 
 if __name__ == "__main__":
     main()

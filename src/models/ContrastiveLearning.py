@@ -119,7 +119,8 @@ class SimplerHead(nn.Module):
 class ContrastiveModel(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, projection_dim):
         super(ContrastiveModel, self).__init__()
-        self.encoder = AttentionFeatureExtractor(input_size, hidden_size, output_size, num_heads=2)
+        # self.encoder = FeatureExtractor(input_size, hidden_size, output_size)
+        self.encoder = AttentionFeatureExtractor(input_size, hidden_size, output_size, num_heads=4)
         self.projection = ProjectionHead(output_size, projection_dim)
 
     def forward(self, x):

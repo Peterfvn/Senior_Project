@@ -88,11 +88,13 @@ def analyze_feature_importance(classifier, X_test, y_test, feature_names):
 
 if __name__ == "__main__":
     # Load data
-    df = load_file("PFC_con_4.csv")
+    df = load_file("VTA_con_4.csv")
     df = clean_data(df)
     df = trial_avg(df)
 
-    labels = df.iloc[:, 3].values
+    df = df[df[df.columns[3]] == 0].reset_index(drop=True)
+
+    labels = df.iloc[:, 4].values
 
     times = df.iloc[:, 5:].values
     phase_feats = extract_regional_features(times)

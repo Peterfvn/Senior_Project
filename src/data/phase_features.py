@@ -83,6 +83,8 @@ def train_model(data, labels, model="lg", feature_elim=False):
         for feature in feature_types:
             feature_names.append(f"{phase}_{feature}")
 
+    # Replace NaN values with 0
+    data = np.nan_to_num(data, nan=0.0)
     
     X_train, X_test, y_train, y_test = train_test_split(data, labels, test_size=0.2, random_state=42)
     if model == "lg":
@@ -182,9 +184,11 @@ def PCA_analysis(X_train):
     plt.close()
 
 def main():
-    df = load_file('PFC_con_4.csv')
+    df = load_file('VTA_con_4.csv')
     df = clean_data(df)
     df = trial_avg(df)
+
+    df = df[df[df.columns[3]] == 0].reset_index(drop=True)
 
     time_values = df.iloc[:, 5:].values
     tone_labels = df.iloc[:, 3].values

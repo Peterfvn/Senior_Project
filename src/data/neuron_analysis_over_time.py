@@ -265,7 +265,7 @@ def cross_validated_tstat_model(df_rat, num_neurons, k=5):
     print(f"F1 Score: {scores[:,3].mean():.3f} ± {scores[:,3].std():.3f}\n")
 
 def run_all_ml():
-    df = load_file('PFC_con_4.csv')
+    df = load_file('VTA_con_4.csv')
     rats = df[df.columns[0]].unique()
 
     for rat_id in rats:
@@ -281,19 +281,20 @@ def run_all_ml():
         cross_validated_tstat_model(rat_df, num_neurons, k=5)
 
 def create_t_histograms():
-    df = load_file('PFC_con_4.csv')
+    df = load_file('VTA_con_4.csv')
     rats = df[df.columns[0]].unique()
+    num_trials = 50
 
     for rat_id in rats:
         rat_df = df[df[df.columns[0]] == rat_id].reset_index(drop=True)
         rat_df = rat_df[rat_df[rat_df.columns[3]] == 0.0].reset_index(drop=True)
 
-        num_neurons = len(rat_df) // 50
+        num_neurons = len(rat_df) // num_trials
         t_matrix = np.zeros((num_neurons, 100))
         best_windows = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}  # Initialize counts for each window
 
         for i in range(num_neurons):
-            df_neuron = rat_df.iloc[i*50:(i+1)*50, :]
+            df_neuron = rat_df.iloc[i*num_trials:(i+1)*num_trials, :]
             t_matrix[i, :] = t_test_list(df_neuron, press_test=True)
 
             # Compute the sum of t-values in the window
@@ -317,7 +318,7 @@ def create_t_histograms():
         plt.close()
 
 
-create_t_histograms()
+run_all_ml()
 """
 Rat 1.0 - Discriminability:
 Discriminability (Press prediction): 1.0

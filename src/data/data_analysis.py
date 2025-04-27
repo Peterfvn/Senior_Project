@@ -59,7 +59,7 @@ def pca_tsne(df):
 
 
 def main():
-    df = load_file('PFC_con_4.csv')
+    df = load_file('VTA_con_4.csv')
     df = clean_data(df)
     df = trial_avg(df)
 
