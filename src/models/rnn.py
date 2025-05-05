@@ -3,6 +3,7 @@ from torch import nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
+"""Old RNN model that didn't get improved. I even just used GRUs later"""
 class NaiveRNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(NaiveRNN, self).__init__()

@@ -8,6 +8,7 @@ from sklearn.manifold import TSNE
 
 from load import *
 
+"""Generate plots for data analysis. Creates heatmaps and PCA/tSNE plots for the data."""
 def heatmap_time(df):
     # Unique rats
     num_rats = df[df.columns[0]].unique()

@@ -4,6 +4,8 @@ import os
 from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 
+"""This script didn't get used much. It explored normalization techniques I didn't end up using."""
+
 def trial_avg(df):
     """Calculate population average by trial"""
     # Group by rat_id and trial_id, then calculate the mean for each group

@@ -6,6 +6,7 @@ from sklearn.inspection import permutation_importance
 
 from load import *
 
+"""Feature extraction for regional features."""
 def extract_regional_features(times):
     pre_tone = times[:, :20]
     tone = times[:, 20:80]

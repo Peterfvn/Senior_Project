@@ -6,6 +6,10 @@ from dotenv import load_dotenv
 import os
 from scipy.cluster.hierarchy import dendrogram, linkage
 
+"""
+Visualization file that didn't get used much.
+Most visualizations were created in the script with the relevant features to be visualized.
+"""
 load_dotenv()
 save_dir = os.getenv("VISUALIZATION_DIR")
 

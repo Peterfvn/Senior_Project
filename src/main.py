@@ -10,6 +10,7 @@ from torch import nn
 import argparse
 import numpy as np
 
+"""Entry point for the contastive learning model"""
 def parse_args():
     parser = argparse.ArgumentParser(description='Neural Network Training Parameters')
     parser.add_argument('--epochs', type=int, default=10,
@@ -23,18 +24,19 @@ def parse_args():
     return parser.parse_args()
 
 def main(flag=False):
-    """Focus on feature extraction from clustering"""
     args = parse_args()
     df = load_file('VTA_con_4.csv')
     df = clean_data(df)
     df = trial_avg(df)
 
+    # Get random indices for train/test split
     np.random.seed(42)
     indices = np.random.permutation(len(df))
     split_idx =  int(0.8 * len(df))
 
     train_indices, test_indices = indices[:split_idx], indices[split_idx:]
 
+    # Get dataset for encoder and decoder
     train_dataset_encoder = ContrastiveDataset(df, train_indices, augment=True)
     train_dataset_decoder = ContrastiveDataset(df, train_indices, augment=False)
 
@@ -47,12 +49,13 @@ def main(flag=False):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    # Run the model
     encoder = ContrastiveModel(input_size=1, hidden_size=128, output_size=64, projection_dim=128)
     encoder = encoder.to(device)
 
     optimizer = torch.optim.Adam(encoder.parameters(), lr=0.001)
 
-
+    
     train_encoder(encoder, train_dataloader_encoder, optimizer, device, num_epochs=200, print_bool=True)
     if flag:
         evaluate_encoder(encoder, test_dataloader, device)

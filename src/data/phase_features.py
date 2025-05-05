@@ -10,6 +10,7 @@ from sklearn.inspection import permutation_importance
 
 from load import *
 
+"""Feature extraction for phase-based features."""
 def extract_features(data):
     """Extract phase-based features from the DataFrame"""
     regions = {

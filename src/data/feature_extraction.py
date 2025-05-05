@@ -9,6 +9,7 @@ from sklearn.preprocessing import StandardScaler
 
 from load import *
 
+"""General feature extraction. PCA/tSNE/UMAP analysis. Explores some normalization techniques also."""
 def extract_general_features(df):
     """Extract general features from the DataFrame"""
 

@@ -11,6 +11,7 @@ from tslearn.clustering import TimeSeriesKMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import AgglomerativeClustering
 
+"""Helper functions to load and process data."""
 def load_data():
     # All filespaths
     load_dotenv()

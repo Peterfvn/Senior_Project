@@ -7,7 +7,7 @@ import numpy as np
 
 """SimCLR-style Contrastive Learning"""
 
-# Feature Extractor (explore MLP/RNN/CNN/etc)
+# Feature Extractor
 class FeatureExtractor(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, num_layers=1):
         super(FeatureExtractor, self).__init__()
@@ -15,7 +15,7 @@ class FeatureExtractor(nn.Module):
         self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        if x.dim() == 2: # Change shape to [batch, sequence, # features (1 in this case)]
+        if x.dim() == 2: # Change shape to [batch, sequence, # features (1 for now)]
             x = x.unsqueeze(-1)
 
         _, h_n = self.rnn(x)
@@ -141,7 +141,7 @@ def contrastive_loss(z1, z2, y, device, temperature=0.7, hard_negative_weight=0.
     labels = torch.cat([y, y], dim=0).long().to(device)
     labels_matrix = (labels.unsqueeze(0) == labels.unsqueeze(1)).float() # Create a matrix of labels
 
-    # Identify hard negatives: negatives with high similarity but different labels
+    # Identify hard negatives
     hard_negatives = (sim_matrix > 0.5) & (labels_matrix == 0)
     hard_negatives = hard_negatives.float() * hard_negative_weight
 

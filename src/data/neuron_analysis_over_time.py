@@ -212,6 +212,7 @@ def cross_validated_tstat_model(df_rat, num_neurons, k=5):
 
     scores = []
 
+    """Manual 5 fold cross-validation"""
     for fold, (train_idx, test_idx) in enumerate(kf.split(np.arange(n_trials))):
         # print(f"Fold {fold + 1}")
 

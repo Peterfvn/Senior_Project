@@ -11,6 +11,11 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
+"""
+This script didn't get used much. It explored clustering to see if there 
+were cross-sectional similarities by press rates
+"""
+
 def prepare_data():
     df = load_file('PFC_con_4.csv')
     df = clean_data(df)
