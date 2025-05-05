@@ -1,3 +1,5 @@
+# Basic Data Information
+
 Timings:
 
 -1 - 4s
@@ -12,6 +14,11 @@ Timings:
 81-88 lever presentation
 afterwards lever visible for 1000ms
 
+# The following information is outdated
+#### This file was used in the beginning of this project to keep track of some ideas.
+#### If you would like to keep reading about some things I did or considered, keep reading
+
+## Possible Solutions to Explore
 Possible solutions to the problem with individuality in rats shown by my population_avg data
 1. Normalization/Standardize between rats
 2. Rat-Specific Identifier as a feature
